@@ -18,6 +18,7 @@ namespace ChatApp.server.Controllers
         [HttpGet(Name = "GetChats")]
         public async Task<ActionResult<IEnumerable<ChatMessages>>> Get()
         {
+            // Todo Add pagination
             var chatMessages = await _context.ChatMessages.ToListAsync();
             return Ok(chatMessages);
         }

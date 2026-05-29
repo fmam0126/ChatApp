@@ -1,0 +1,7 @@
+﻿Add Authentication. the client should ask for a Token and give a username and the server should validate the token and return a response. The client should then be able to send messages to the server and the server should broadcast those messages to all connected clients.
+
+The server should also maintain a list of connected clients and their usernames. When a client connects, the server should broadcast a message to all clients that a new user has joined. When a client disconnects, the server should broadcast a message that the user has left.
+
+The server should also handle edge cases such as invalid tokens, duplicate usernames, and message formatting errors. The client should display appropriate error messages to the user in these cases.
+
+sanitize user input to prevent injection attacks and ensure that messages are properly formatted before broadcasting them to other clients.

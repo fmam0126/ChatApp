@@ -10,39 +10,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddAuthentication(BearerTokenDefaults.AuthenticationScheme);
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi(options =>
-{
-    options.AddDocumentTransformer((document, context, CancellationToken) =>
-    {
-        var securityScheme = new OpenApiSecurityScheme
-        {
-            Type = SecuritySchemeType.Http,
-            Scheme = "bearer",
-            BearerFormat = "JWT",
-            Description = "JWT Authorization header using the Bearer scheme."
-        };
-        document.Components ??= new OpenApiComponents();
-        document.Components.SecuritySchemes.Add("bearer", securityScheme);
-
-        document.Security.Add(new OpenApiSecurityRequirement
-        {
-            {
-                new OpenApiSecurityScheme
-                {
-                    
-                    Reference = new OpenApiReference
-                    {
-                        Type = ReferenceType.SecurityScheme,
-                        Id = "bearer"
-                    }
-                },
-                Array.Empty<string>()
-            }
-        });
-
-        return Task.CompletedTask;
-    });
-});
+builder.Services.AddOpenApi();
 builder.Services.AddSwaggerGen(options =>
 {
     options.AddSecurityDefinition("bearer", new OpenApiSecurityScheme
@@ -70,11 +38,8 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
     //app.MapScalarApiReference();
-    app.UseSwaggerUI(options =>
-    {
-        options.SwaggerEndpoint("/openapi/v1.json", "Chat API v1");
-        options.DefaultModelsExpandDepth(0);
-    });
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
 app.UseHttpsRedirection();

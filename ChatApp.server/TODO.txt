@@ -5,3 +5,5 @@ The server should also maintain a list of connected clients and their usernames.
 The server should also handle edge cases such as invalid tokens, duplicate usernames, and message formatting errors. The client should display appropriate error messages to the user in these cases.
 
 sanitize user input to prevent injection attacks and ensure that messages are properly formatted before broadcasting them to other clients.
+
+SignalR

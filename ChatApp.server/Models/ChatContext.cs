@@ -6,7 +6,7 @@ namespace ChatApp.server.Models
 {
     public class ChatContext(DbContextOptions<ChatContext> options) : DbContext(options), IChatContext
     {
-        public DbSet<ChatMessages> ChatMessages { get; set; }
+        public DbSet<ChatMessage> ChatMessages { get; set; }
         public DbSet<User> Users { get; set; }
     }
 }

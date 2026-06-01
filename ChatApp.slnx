@@ -1,3 +1,4 @@
 <Solution>
+  <Project Path="ChatApp.CliClient/ChatApp.CliClient.csproj" Id="005e94ab-d941-444f-9c4a-2cdbf2fc5937" />
   <Project Path="ChatApp.server/ChatApp.server.csproj" />
 </Solution>

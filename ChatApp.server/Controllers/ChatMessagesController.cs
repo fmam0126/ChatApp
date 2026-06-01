@@ -16,7 +16,7 @@ namespace ChatApp.server.Controllers
         }
 
         [HttpGet(Name = "GetChats")]
-        public async Task<ActionResult<IEnumerable<ChatMessages>>> Get()
+        public async Task<ActionResult<IEnumerable<ChatMessage>>> Get()
         {
             // Todo Add pagination
             var chatMessages = await _context.ChatMessages.ToListAsync();
@@ -24,10 +24,10 @@ namespace ChatApp.server.Controllers
         }
 
         [HttpPost(Name = "PostChat")]
-        public async Task<ActionResult<ChatMessages>> Post(ChatMessageDTO newChatMessage)
+        public async Task<ActionResult<ChatMessage>> Post(ChatMessageDTO newChatMessage)
         {
             // Implementation for posting a new chat message
-            var chatMessage = new ChatMessages
+            var chatMessage = new ChatMessage
             {
                 Content = newChatMessage.Content,
                 Created = DateTime.UtcNow,

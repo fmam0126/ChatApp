@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ChatApp.server.Models
 {
-    public class ChatMessages
+    public class ChatMessage
     {
         [Key]
         public int Id { get; set; }

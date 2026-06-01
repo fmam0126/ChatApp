@@ -1,9 +1,10 @@
-﻿Add Authentication. the client should ask for a Token and give a username and the server should validate the token and return a response. The client should then be able to send messages to the server and the server should broadcast those messages to all connected clients.
-
-The server should also maintain a list of connected clients and their usernames. When a client connects, the server should broadcast a message to all clients that a new user has joined. When a client disconnects, the server should broadcast a message that the user has left.
-
-The server should also handle edge cases such as invalid tokens, duplicate usernames, and message formatting errors. The client should display appropriate error messages to the user in these cases.
-
-sanitize user input to prevent injection attacks and ensure that messages are properly formatted before broadcasting them to other clients.
-
-SignalR
+﻿✅ Add Authentication — JWT symmetric HMAC-SHA256, /auth/login endpoint, token issued per username
+✅ Duplicate username prevention — per-session via ConnectedUsersService
+✅ Message persistence — SQLite database, messages saved in ChatHub.SendMessage
+✅ Chat history — GET /ChatMessages with ?count= param, authorized, ordered by date
+✅ Input sanitization — message length limit, control character stripping, username validation
+✅ Spectre.Console CLI — rich terminal UI with colored panels, spinner, table history
+✅ CLI auth flow — prompts for username, gets JWT, uses for SignalR + REST
+✅ System messages — join/leave notifications broadcast to all clients
+✅ User connection tracking — ConnectedUsersService with ConcurrentDictionary
+✅ SignalR security — token from query string for WebSocket connections

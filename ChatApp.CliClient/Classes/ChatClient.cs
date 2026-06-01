@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Net.Http.Headers;
 using System.Text.Json;
 using ChatApp.CliClient.Interfaces;
 using ChatApp.CliClient.Models;
@@ -10,30 +8,26 @@ namespace ChatApp.CliClient.Classes
     internal class ChatClient : IChatClient
     {
         private readonly HttpClient _httpClient;
-        public ChatClient(HttpClient httpClient) => _httpClient = httpClient;
-        public async Task<IEnumerable<ChatMessage>> GetMessagesAsync()
-        {
-            var response =  await _httpClient.GetAsync("/ChatMessages");
-            // Process the response and return the messages
-            response.EnsureSuccessStatusCode();
-            var messages = new List<ChatMessage>();
-            messages = await JsonSerializer.DeserializeAsync<List<ChatMessage>>(await response.Content.ReadAsStreamAsync());
-            return messages;
 
+        public ChatClient(string serverUrl, string accessToken)
+        {
+            _httpClient = new HttpClient
+            {
+                BaseAddress = new Uri(serverUrl)
+            };
+            _httpClient.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", accessToken);
         }
 
-        public async Task<bool> SendMessageAsync(string message)
+        public async Task<IEnumerable<ChatMessage>> GetMessagesAsync(int count = 50)
         {
-            // Implementation for sending a message
-
-            var chatMessage = new ChatMessage
-            {
-                content = message,
-            };
-            var jsonContent = new StringContent(JsonSerializer.Serialize(chatMessage), Encoding.UTF8, "application/json");
-            var response = await _httpClient.PostAsync("/ChatMessages", jsonContent);
+            var response = await _httpClient.GetAsync($"/ChatMessages?count={count}");
             response.EnsureSuccessStatusCode();
-            return response.IsSuccessStatusCode;
+
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var messages = await JsonSerializer.DeserializeAsync<List<ChatMessage>>(
+                await response.Content.ReadAsStreamAsync(), options);
+            return messages ?? [];
         }
     }
 }

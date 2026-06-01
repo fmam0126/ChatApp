@@ -1,12 +1,9 @@
-﻿using ChatApp.CliClient.Models;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Primitives;
+﻿using ChatApp.CliClient.Classes;
 using ChatApp.CliClient.Interfaces;
-using ChatApp.CliClient.Classes;
+using ChatApp.CliClient.Models;
 using Microsoft.AspNetCore.SignalR.Client;
-
+using Microsoft.Extensions.Configuration;
+using Spectre.Console;
 
 namespace ChatApp.CliClient
 {
@@ -14,6 +11,7 @@ namespace ChatApp.CliClient
     {
         static async Task Main(string[] args)
         {
+            // ── Load configuration ──
             IConfigurationRoot config;
             try
             {
@@ -21,13 +19,13 @@ namespace ChatApp.CliClient
                     .SetBasePath(Directory.GetCurrentDirectory())
                     .AddJsonFile("appsettings.json", optional: false)
                     .Build();
-
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error loading configuration: {ex.Message}");
+                SpectreDisplay.ShowError($"Error loading configuration: {ex.Message}");
                 return;
             }
+
             Settings? settings;
             try
             {
@@ -35,95 +33,143 @@ namespace ChatApp.CliClient
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error loading settings: {ex.Message}");
+                SpectreDisplay.ShowError($"Error loading settings: {ex.Message}");
                 return;
             }
 
-            //var builder = Host.CreateApplicationBuilder();
+            if (settings == null || string.IsNullOrWhiteSpace(settings.ServerUrl))
+            {
+                SpectreDisplay.ShowError("ServerUrl is missing in appsettings.json.");
+                return;
+            }
 
-            //builder.Services.ConfigureHttpClientDefaults(webBuilder =>
-            //{
-            //    webBuilder.ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
-            //    {
-            //        ConnectTimeout = TimeSpan.FromSeconds(10)
+            // ── Welcome ──
+            SpectreDisplay.ShowWelcome();
 
-            //    });
-            //});
+            // ── Authenticate (loop until unique username) ──
+            var authService = new AuthService();
+            string? accessToken = null;
+            string username;
 
-            //builder.Services.AddHttpClient<IChatClient, ChatClient>(client =>
-            //{
-            //    client.BaseAddress = new Uri(settings.ServerUrl);
-            //});
+            while (true)
+            {
+                username = SpectreDisplay.Prompt("Enter your username:").Trim();
 
-
-            //using var host = builder.Build();
-            //var chatClient = host.Services.GetRequiredService<IChatClient>();
-
-
-
-            //await chatClient.SendMessageAsync("Hello from CLI client!");
-            //var messages = await chatClient.GetMessagesAsync();
-            //foreach (var message in messages)
-            //{
-            //    Console.WriteLine(message.content);
-            //}
-
-            var connection = new HubConnectionBuilder()
-                .WithUrl($"{settings?.ServerUrl}/chatHub", options =>
+                if (username.Length < 3 || username.Length > 30)
                 {
-                    options.AccessTokenProvider = () => Task.FromResult(settings?.AcessToken);
+                    SpectreDisplay.ShowError("Username must be between 3 and 30 characters.");
+                    continue;
+                }
+
+                await SpectreDisplay.ShowSpinner("Authenticating...", async () =>
+                {
+                    accessToken = await authService.LoginAsync(settings.ServerUrl, username);
+                });
+
+                if (accessToken != null)
+                {
+                    SpectreDisplay.ShowSuccess($"Logged in as {username}");
+                    break;
+                }
+
+                SpectreDisplay.ShowError($"Username '{username}' is already taken. Please choose another.");
+            }
+
+            // ── Connect to SignalR hub ──
+            var connection = new HubConnectionBuilder()
+                .WithUrl($"{settings.ServerUrl}/chatHub", options =>
+                {
+                    options.AccessTokenProvider = () => Task.FromResult(accessToken)!;
                 })
                 .WithAutomaticReconnect()
                 .Build();
 
             connection.On<string, string>("ReceiveMessage", (user, message) =>
             {
-                Console.WriteLine($"{user}: {message}");
+                SpectreDisplay.RenderMessage(user, message);
             });
+
+            connection.Reconnecting += _ =>
+            {
+                SpectreDisplay.ShowInfo("Connection lost. Reconnecting...");
+                return Task.CompletedTask;
+            };
+
+            connection.Reconnected += _ =>
+            {
+                SpectreDisplay.ShowSuccess("Reconnected!");
+                return Task.CompletedTask;
+            };
 
             try
             {
-                Console.WriteLine("Connecting to chat server...");
-                await connection.StartAsync();
-                Console.WriteLine("Connected to chat server.");
-
-
+                await SpectreDisplay.ShowSpinner("Connecting to chat server...", async () =>
+                {
+                    await connection.StartAsync();
+                });
+                SpectreDisplay.ShowSuccess("Connected to chat server.");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error connecting to chat server: {ex.Message}");
-
+                SpectreDisplay.ShowError($"Failed to connect: {ex.Message}");
+                return;
             }
 
-            Console.WriteLine("Enter your name: ");
-            string userName = Console.ReadLine() ?? "Unknown";
+            // ── Load chat history ──
+            var chatClient = new ChatClient(settings.ServerUrl, accessToken!);
+            try
+            {
+                List<ChatMessage>? history = null;
+                await SpectreDisplay.ShowSpinner("Loading chat history...", async () =>
+                {
+                    var messages = await chatClient.GetMessagesAsync(50);
+                    history = messages.ToList();
+                });
+
+                if (history != null)
+                {
+                    SpectreDisplay.RenderHistory(history);
+                }
+            }
+            catch (Exception ex)
+            {
+                SpectreDisplay.ShowError($"Could not load chat history: {ex.Message}");
+            }
+
+            // ── Chat loop ──
+            AnsiConsole.MarkupLine("[grey]Type your message and press Enter. Type [bold]/exit[/] to quit.[/]");
+            AnsiConsole.WriteLine();
 
             while (true)
             {
-                Console.WriteLine("Enter a message (or 'exit' to quit): ");
-                string message = Console.ReadLine() ?? "";
-                if (message.Equals("exit", StringComparison.OrdinalIgnoreCase))
+                var input = SpectreDisplay.Prompt(">");
+
+                if (string.IsNullOrWhiteSpace(input)) continue;
+
+                if (input.Equals("/exit", StringComparison.OrdinalIgnoreCase))
                 {
                     break;
                 }
+
                 try
                 {
-                    await connection.InvokeAsync("SendMessage", userName, message);
+                    await connection.InvokeAsync("SendMessage", input);
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Error sending message: {ex.Message}");
+                    SpectreDisplay.ShowError($"Failed to send: {ex.Message}");
                 }
             }
 
+            // ── Disconnect ──
             try
             {
                 await connection.StopAsync();
-                Console.WriteLine("Disconnected from chat server.");
+                SpectreDisplay.ShowInfo("Disconnected from chat server.");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error disconnecting from chat server: {ex.Message}");
+                SpectreDisplay.ShowError($"Error during disconnect: {ex.Message}");
             }
         }
     }

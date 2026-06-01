@@ -1,6 +1,8 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using ChatApp.server.Class;
+using ChatApp.server.DTO;
+using ChatApp.server.Models;
 using Microsoft.AspNetCore.Mvc;
-using System.IdentityModel.Tokens.Jwt;
+using Microsoft.EntityFrameworkCore;
 
 namespace ChatApp.server.Controllers
 {
@@ -8,25 +10,48 @@ namespace ChatApp.server.Controllers
     [ApiController]
     public class AuthController : ControllerBase
     {
-        [HttpGet("token")]
-        public async Task<IActionResult> ReadToken()
+        private readonly ChatContext _context;
+        private readonly TokenService _tokenService;
+        private readonly ConnectedUsersService _connectedUsers;
+
+        public AuthController(ChatContext context, TokenService tokenService, ConnectedUsersService connectedUsers)
         {
-            var authorizationHeader = Request.Headers["Authorization"].FirstOrDefault();
-            
-            if (string.IsNullOrEmpty(authorizationHeader))
+            _context = context;
+            _tokenService = tokenService;
+            _connectedUsers = connectedUsers;
+        }
+
+        [HttpPost("login")]
+        public async Task<IActionResult> Login([FromBody] LoginRequestDTO request)
+        {
+            var username = request.Username?.Trim();
+            if (string.IsNullOrWhiteSpace(username) || username.Length < 3 || username.Length > 30)
             {
-                return Unauthorized();
+                return BadRequest(new { message = "Username must be between 3 and 30 characters." });
             }
-            var token = authorizationHeader.Replace("Bearer ", "");
 
-            var handler = new JwtSecurityTokenHandler();
-
-            var jwtToken = handler.ReadJwtToken(token);
-            // Implementation for generating authentication token
-            return Ok(new 
+            // Check if username is already taken by an active connection
+            if (_connectedUsers.IsUsernameTaken(username))
             {
-                jwtToken.Header,
-                Claims = jwtToken.Claims.Select(c => new { c.Type, c.Value })
+                return Conflict(new { message = "Username already taken. Please choose another." });
+            }
+
+            // Find or create user
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Name == username);
+            if (user == null)
+            {
+                user = new User { Name = username };
+                _context.Users.Add(user);
+                await _context.SaveChangesAsync();
+            }
+
+            var token = _tokenService.GenerateToken(user);
+
+            return Ok(new LoginResponseDTO
+            {
+                Token = token,
+                Username = user.Name,
+                UserId = user.Id
             });
         }
     }

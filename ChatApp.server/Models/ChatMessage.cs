@@ -11,5 +11,6 @@ namespace ChatApp.server.Models
         public DateTime Created { get; set; }
         [ForeignKey(nameof(User.Id))]
         public int SenderId { get; set; }
+        public User Sender { get; set; } = null!;
     }
 }

@@ -1,17 +1,23 @@
+using System.Text;
 using ChatApp.server.Hubs;
 using ChatApp.server.Models;
-using Microsoft.AspNetCore.Authentication.BearerToken;
+using ChatApp.server.Class;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
-using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Bind JWT settings from configuration
+var jwtSettings = builder.Configuration.GetSection("JwtSettings");
+var secretKey = jwtSettings["SecretKey"]!;
+var issuer = jwtSettings["Issuer"]!;
+var audience = jwtSettings["Audience"]!;
+var keyBytes = Encoding.UTF8.GetBytes(secretKey);
+
 // Add services to the container.
-builder.Services.AddAuthentication(BearerTokenDefaults.AuthenticationScheme);
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -30,60 +36,60 @@ builder.Services.AddSwaggerGen(options =>
 
 builder.Services.AddSignalR();
 
+// SQLite persistence (replaces in-memory)
 builder.Services.AddDbContext<ChatContext>(options =>
-    options.UseInMemoryDatabase("ChatDatabase"));
+    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = BearerTokenDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = BearerTokenDefaults.AuthenticationScheme;
-
-}).AddJwtBearer(options =>
-{
-    // Configure the Authority to the expected value for
-    // the authentication provider. This ensures the token
-    // is appropriately validated.
-    options.Authority = "Authority URL"; // TODO: Update URL
-
-    // We have to hook the OnMessageReceived event in order to
-    // allow the JWT authentication handler to read the access
-    // token from the query string when a WebSocket or 
-    // Server-Sent Events request comes in.
-
-    // Sending the access token in the query string is required when using WebSockets or ServerSentEvents
-    // due to a limitation in Browser APIs. We restrict it to only calls to the
-    // SignalR hub in this code.
-    // See https://docs.microsoft.com/aspnet/core/signalr/security#access-token-logging
-    // for more information about security considerations when using
-    // the query string to transmit the access token.
-    options.Events = new JwtBearerEvents
+// JWT Authentication — symmetric HMAC-SHA256
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
     {
-        OnMessageReceived = context =>
+        options.TokenValidationParameters = new TokenValidationParameters
         {
-            var accessToken = context.Request.Query["access_token"];
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = issuer,
+            ValidAudience = audience,
+            IssuerSigningKey = new SymmetricSecurityKey(keyBytes)
+        };
 
-            // If the request is for our hub...
-            var path = context.HttpContext.Request.Path;
-            if (!string.IsNullOrEmpty(accessToken) &&
-                (path.StartsWithSegments("/chatHub")))
+        // Read token from query string for SignalR WebSocket connections
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
             {
-                // Read the token out of the query string
-                context.Token = accessToken;
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) &&
+                    path.StartsWithSegments("/chatHub"))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
             }
-            return Task.CompletedTask;
-        }
-    };
-});
+        };
+    });
 
-
+// Custom services
+builder.Services.AddSingleton(sp =>
+    new TokenService(secretKey, issuer, audience));
+builder.Services.AddSingleton<ConnectedUsersService>();
 
 var app = builder.Build();
+
+// Ensure database is created on startup
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ChatContext>();
+    db.Database.EnsureCreated();
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
-    //app.MapScalarApiReference();
     app.UseSwagger();
     app.UseSwaggerUI();
 }

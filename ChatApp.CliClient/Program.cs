@@ -138,12 +138,17 @@ namespace ChatApp.CliClient
             //}
 
             // ── Chat loop ──
+
             AnsiConsole.MarkupLine("[grey]Type your message and press Enter. Type [bold]/exit[/] to quit.[/]");
             AnsiConsole.WriteLine();
 
             while (true)
             {
-                var input = SpectreDisplay.Prompt("");
+                int bottomRow = Console.WindowHeight - 1;
+                AnsiConsole.Cursor.SetPosition(0, bottomRow + 1);
+                //Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                //AnsiConsole.WriteLine();
+                var input = SpectreDisplay.Prompt("> ");
 
                 if (string.IsNullOrWhiteSpace(input)) continue;
 
@@ -151,7 +156,8 @@ namespace ChatApp.CliClient
                 {
                     break;
                 }
-
+                AnsiConsole.Cursor.SetPosition(0, bottomRow - 1);
+                //AnsiConsole.WriteLine();
                 try
                 {
                     await connection.InvokeAsync("SendMessage", input);
@@ -172,6 +178,7 @@ namespace ChatApp.CliClient
             {
                 SpectreDisplay.ShowError($"Error during disconnect: {ex.Message}");
             }
+
         }
     }
 }

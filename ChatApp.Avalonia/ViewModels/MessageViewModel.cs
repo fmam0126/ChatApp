@@ -6,14 +6,14 @@ namespace ChatApp.Avalonia.ViewModels
     {
         private static readonly Color[] UserColors =
         [
-            Color.FromRgb(0, 255, 255),       // Aqua
-            Color.FromRgb(127, 255, 0),       // Chartreuse
-            Color.FromRgb(255, 0, 255),       // Fuchsia
-            Color.FromRgb(255, 215, 0),       // Gold
-            Color.FromRgb(147, 112, 219),     // MediumPurple
-            Color.FromRgb(0, 191, 255),       // DeepSkyBlue
-            Color.FromRgb(255, 105, 180),     // HotPink
-            Color.FromRgb(255, 165, 0),       // Orange
+            Color.FromRgb(65, 105, 225),    // RoyalBlue
+            Color.FromRgb(34, 139, 34),     // ForestGreen
+            Color.FromRgb(220, 20, 60),     // Crimson
+            Color.FromRgb(153, 50, 204),    // DarkOrchid
+            Color.FromRgb(0, 128, 128),     // Teal
+            Color.FromRgb(210, 105, 30),    // Chocolate
+            Color.FromRgb(70, 130, 180),    // SteelBlue
+            Color.FromRgb(205, 92, 92),     // IndianRed
         ];
 
         public string Timestamp { get; set; } = string.Empty;

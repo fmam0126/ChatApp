@@ -18,6 +18,8 @@
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Classic.Avalonia.Theme" Version="11.3.0.3" />
+    <PackageReference Include="Classic.Avalonia.Theme.ColorPicker" Version="11.3.0.3" />
+    <PackageReference Include="Classic.Avalonia.Theme.DataGrid" Version="11.3.0.3" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0" />
   </ItemGroup>

@@ -1,7 +1,7 @@
-<Window xmlns="https://github.com/avaloniaui"
+<classic:ClassicWindow xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:classic="clr-namespace:Classic.Avalonia.Theme;assembly=Classic.Avalonia.Theme"
         xmlns:vm="using:ChatApp.Avalonia.ViewModels"
-        xmlns:conv="using:ChatApp.Avalonia.Converters"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="550"
@@ -9,12 +9,13 @@
         x:DataType="vm:MainViewModel"
         Title="GamingChat!!!"
         MinWidth="500" MinHeight="400"
-        Width="800" Height="550">
+        Width="800" Height="550"
+        WindowStartupLocation="CenterScreen"
+        Padding="6">
 
-    <Window.Resources>
-        <!-- Message item template -->
+    <classic:ClassicWindow.Resources>
         <DataTemplate x:Key="MessageTemplate" x:DataType="vm:MessageViewModel">
-            <TextBlock TextWrapping="Wrap" Margin="4,2">
+            <TextBlock TextWrapping="Wrap" Margin="2,1" FontSize="12">
                 <Run Text="[" Foreground="Gray" />
                 <Run Text="{Binding Timestamp}" Foreground="Gray" />
                 <Run Text="] " Foreground="Gray" />
@@ -23,122 +24,100 @@
                 <Run Text="{Binding Content}" />
             </TextBlock>
         </DataTemplate>
-    </Window.Resources>
+    </classic:ClassicWindow.Resources>
 
     <Grid RowDefinitions="Auto,*,Auto">
-        <!-- ═══ Header ═══ -->
-        <Border Grid.Row="0" Background="#1A1A2E" Padding="16,12">
-            <Grid ColumnDefinitions="*,Auto">
-                <TextBlock Text="GamingChat!!!"
-                           FontSize="24" FontWeight="Bold"
-                           Foreground="#00D4FF"
-                           VerticalAlignment="Center" />
-                <TextBlock Grid.Column="1"
-                           Text="Real-time Chat"
-                           FontSize="14" Foreground="Gray"
-                           VerticalAlignment="Center" />
-            </Grid>
-        </Border>
 
-        <!-- ═══ Content Area ═══ -->
-        <Grid Grid.Row="1" Background="#16213E">
+        <!-- ═══ Login Panel (visible when disconnected) ═══ -->
+        <Border Grid.Row="0" Grid.RowSpan="2"
+                BorderThickness="2"
+                Margin="24"
+                Padding="10"
+                HorizontalAlignment="Center" VerticalAlignment="Center"
+                MinWidth="380" MaxWidth="460"
+                IsVisible="{Binding IsDisconnected}">
+            <Grid RowDefinitions="Auto,*">
+                <TextBlock Grid.Row="0" Text="Join Chat"
+                           FontSize="12" FontWeight="Bold"
+                           Margin="0,-17,0,4" />
 
-            <!-- ── Login panel (visible when disconnected) ── -->
-            <Border IsVisible="{Binding IsDisconnected}"
-                    HorizontalAlignment="Center" VerticalAlignment="Center"
-                    MinWidth="400" MaxWidth="500"
-                    Padding="32" CornerRadius="8"
-                    Background="#1A1A2E" BorderBrush="#333366" BorderThickness="1">
-                <StackPanel Spacing="16">
-                    <TextBlock Text="Join Chat"
-                               FontSize="22" FontWeight="Bold"
-                               Foreground="White" HorizontalAlignment="Center" />
-
-                    <StackPanel Spacing="4">
-                        <TextBlock Text="Server URL" Foreground="Gray" FontSize="12" />
+                <StackPanel Grid.Row="1" Spacing="10">
+                    <StackPanel Spacing="2">
+                        <TextBlock Text="Server URL:" FontSize="12" />
                         <TextBox Text="{Binding ServerUrl}"
-                                 Watermark="https://localhost:7216"
-                                 FontSize="14" Padding="8" />
+                                 Watermark="https://localhost:8081"
+                                 FontSize="13" />
                     </StackPanel>
 
-                    <StackPanel Spacing="4">
-                        <TextBlock Text="Username" Foreground="Gray" FontSize="12" />
+                    <StackPanel Spacing="2">
+                        <TextBlock Text="Username:" FontSize="12" />
                         <TextBox Text="{Binding Username}"
                                  Watermark="Enter username (3-30 characters)"
-                                 FontSize="14" Padding="8" />
+                                 FontSize="13" />
                     </StackPanel>
 
                     <Button Content="Connect"
                             Command="{Binding ConnectCommand}"
-                            FontSize="16" FontWeight="Bold"
-                            Padding="16,10" Margin="0,8,0,0"
-                            Background="#00D4FF" Foreground="#1A1A2E" />
+                            HorizontalAlignment="Left"
+                            MinWidth="80" Margin="0,6,0,0" />
 
                     <TextBlock Text="{Binding StatusText}"
-                               Foreground="#FF6B6B" TextWrapping="Wrap"
-                               HorizontalAlignment="Center" FontSize="13" />
+                               FontSize="12" TextWrapping="Wrap" />
                 </StackPanel>
-            </Border>
-
-            <!-- ── Chat panel (visible when connected) ── -->
-            <Grid IsVisible="{Binding IsConnected}"
-                  RowDefinitions="Auto,*,Auto" Margin="4">
-
-                <!-- Chat header bar -->
-                <Border Grid.Row="0" Background="#1A1A2E" Padding="12,8"
-                        BorderBrush="#333366" BorderThickness="0,0,0,1">
-                    <Grid ColumnDefinitions="*,Auto">
-                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                            <TextBlock Text="Connected as" Foreground="Gray" FontSize="13" />
-                            <TextBlock Text="{Binding Username}" Foreground="#00D4FF"
-                                       FontSize="13" FontWeight="Bold" />
-                        </StackPanel>
-                        <Button Grid.Column="1" Content="Disconnect"
-                                Command="{Binding DisconnectCommand}"
-                                FontSize="12" Padding="12,6"
-                                Background="#FF6B6B" Foreground="White"
-                                BorderThickness="0" CornerRadius="4" />
-                    </Grid>
-                </Border>
-
-                <!-- Messages area -->
-                <Border Grid.Row="1" Background="#0F3460" Padding="8">
-                    <ListBox x:Name="MessagesListBox"
-                             ItemsSource="{Binding Messages}"
-                             ItemTemplate="{StaticResource MessageTemplate}"
-                             Background="Transparent"
-                             BorderThickness="0" />
-                </Border>
-
-                <!-- Message input area -->
-                <Border Grid.Row="2" Background="#1A1A2E" Padding="8"
-                        BorderBrush="#333366" BorderThickness="0,1,0,0">
-                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                        <TextBox x:Name="MessageInput"
-                                 Text="{Binding MessageText}"
-                                 Watermark="Type a message..."
-                                 FontSize="14" Padding="10,8"
-                                 VerticalAlignment="Center"
-                                 KeyDown="MessageInput_KeyDown" />
-                        <Button Grid.Column="1" Content="Send"
-                                Command="{Binding SendMessageCommand}"
-                                FontSize="14" FontWeight="Bold"
-                                Padding="20,8"
-                                Background="#00D4FF" Foreground="#1A1A2E"
-                                BorderThickness="0" CornerRadius="4" />
-                    </Grid>
-                </Border>
             </Grid>
-        </Grid>
+        </Border>
+
+        <!-- ═══ Chat Panel (visible when connected) ═══ -->
+        <Border Grid.Row="0" Grid.RowSpan="2"
+                BorderThickness="2"
+                Margin="4"
+                Padding="8"
+                IsVisible="{Binding IsConnected}">
+            <Grid RowDefinitions="Auto,Auto,*,Auto">
+                <TextBlock Grid.Row="0" Text="Chat"
+                           FontSize="12" FontWeight="Bold"
+                           Margin="-6,-16,0,4" />
+
+                <StackPanel Grid.Row="1" Orientation="Horizontal"
+                            Spacing="8" Margin="0,0,0,4">
+                    <TextBlock Text="Connected as:" FontSize="12" />
+                    <TextBlock Text="{Binding Username}"
+                               FontSize="12" FontWeight="Bold" />
+                    <Button Content="Disconnect"
+                            Command="{Binding DisconnectCommand}"
+                            MinWidth="80" />
+                </StackPanel>
+
+                <!-- Messages -->
+                <ListBox x:Name="MessagesListBox"
+                         Grid.Row="2"
+                         ItemsSource="{Binding Messages}"
+                         ItemTemplate="{StaticResource MessageTemplate}"
+                         BorderThickness="2"
+                         Margin="0,0,0,4" />
+
+                <!-- Input area -->
+                <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="6">
+                    <TextBox x:Name="MessageInput"
+                             Text="{Binding MessageText}"
+                             Watermark="Type a message..."
+                             MinWidth="400"
+                             FontSize="13"
+                             KeyDown="MessageInput_KeyDown" />
+                    <Button Content="Send"
+                            
+                            Command="{Binding SendMessageCommand}"
+                            MinWidth="64" />
+                </StackPanel>
+            </Grid>
+        </Border>
 
         <!-- ═══ Status Bar ═══ -->
-        <Border Grid.Row="2" Background="#0F0F23" Padding="12,4">
-            <StackPanel Orientation="Horizontal" Spacing="6">
-                <Border Width="8" Height="8" CornerRadius="4"
-                        Background="#FF4444" VerticalAlignment="Center" />
-                <TextBlock Text="{Binding StatusText}" Foreground="Gray" FontSize="12"
-                           VerticalAlignment="Center" />
-            </StackPanel>
+        <Border Grid.Row="2"
+                BorderThickness="1"
+                Padding="4,2">
+            <TextBlock Text="{Binding StatusText}"
+                       FontSize="11" />
         </Border>
     </Grid>
-</Window>
+</classic:ClassicWindow>

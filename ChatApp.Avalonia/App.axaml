@@ -1,8 +1,10 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="ChatApp.Avalonia.App"
-             RequestedThemeVariant="Dark">
+             RequestedThemeVariant="{x:Static ClassicTheme.Classic}">
     <Application.Styles>
         <ClassicTheme />
+        <StyleInclude Source="avares://Classic.Avalonia.Theme.ColorPicker/Classic.axaml"/>
     </Application.Styles>
+
 </Application>

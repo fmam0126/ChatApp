@@ -36,7 +36,12 @@ namespace ChatApp.Avalonia.ViewModels
             set
             {
                 if (SetProperty(ref _isConnected, value))
+                {
                     OnPropertyChanged(nameof(IsDisconnected));
+                    (ConnectCommand as RelayCommand)?.RaiseCanExecuteChanged();
+                    (DisconnectCommand as RelayCommand)?.RaiseCanExecuteChanged();
+                    (SendMessageCommand as RelayCommand)?.RaiseCanExecuteChanged();
+                }
             }
         }
 
@@ -61,7 +66,13 @@ namespace ChatApp.Avalonia.ViewModels
         public string MessageText
         {
             get => _messageText;
-            set => SetProperty(ref _messageText, value);
+            set
+            {
+                if (SetProperty(ref _messageText, value))
+                {
+                    (SendMessageCommand as RelayCommand)?.RaiseCanExecuteChanged();
+                }
+            }
         }
 
         public ObservableCollection<MessageViewModel> Messages { get; } = new();

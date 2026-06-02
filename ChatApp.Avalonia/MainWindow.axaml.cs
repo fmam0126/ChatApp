@@ -1,10 +1,10 @@
-using Avalonia.Controls;
 using Avalonia.Input;
+using Classic.Avalonia.Theme;
 using ChatApp.Avalonia.ViewModels;
 
 namespace ChatApp.Avalonia
 {
-    public partial class MainWindow : Window
+    public partial class MainWindow : ClassicWindow
     {
         private readonly MainViewModel _viewModel;
 

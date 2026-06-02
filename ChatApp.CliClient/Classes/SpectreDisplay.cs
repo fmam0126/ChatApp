@@ -27,7 +27,7 @@ internal static class SpectreDisplay
     {
         AnsiConsole.Clear();
         AnsiConsole.Write(
-            new FigletText("ChatApp")
+            new FigletText("GamingChat!!!")
                 .Centered()
                 .Color(Color.Cyan1));
         AnsiConsole.Write(new Rule("[grey]Real-time Chat CLI[/]").RuleStyle("grey"));
@@ -44,13 +44,17 @@ internal static class SpectreDisplay
         }
         else
         {
+            
             var color = GetUserColor(username);
-            var panel = new Panel(Markup.Escape(message))
-            {
-                Header = new PanelHeader($"{username}  [{now}]"),
-                BorderStyle = color,
-            };
-            AnsiConsole.Write(panel);
+
+
+            AnsiConsole.MarkupLine($"[grey][[{now}]][/] [red]{username}: [/][white]{Markup.Escape(message)}[/]");
+            //var panel = new Panel(Markup.Escape(message))
+            //{
+            //    Header = new PanelHeader($"{username}  [{now}]"),
+            //    BorderStyle = color,
+            //};
+            //AnsiConsole.Write(panel);
         }
     }
 

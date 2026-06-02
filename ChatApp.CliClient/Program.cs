@@ -86,6 +86,7 @@ namespace ChatApp.CliClient
 
             connection.On<string, string>("ReceiveMessage", (user, message) =>
             {
+                
                 SpectreDisplay.RenderMessage(user, message);
             });
 
@@ -115,26 +116,26 @@ namespace ChatApp.CliClient
                 return;
             }
 
-            // ── Load chat history ──
-            var chatClient = new ChatClient(settings.ServerUrl, accessToken!);
-            try
-            {
-                List<ChatMessage>? history = null;
-                await SpectreDisplay.ShowSpinner("Loading chat history...", async () =>
-                {
-                    var messages = await chatClient.GetMessagesAsync(50);
-                    history = messages.ToList();
-                });
+            //// ── Load chat history ──
+            //var chatClient = new ChatClient(settings.ServerUrl, accessToken!);
+            //try
+            //{
+            //    List<ChatMessage>? history = null;
+            //    await SpectreDisplay.ShowSpinner("Loading chat history...", async () =>
+            //    {
+            //        var messages = await chatClient.GetMessagesAsync(50);
+            //        history = messages.ToList();
+            //    });
 
-                if (history != null)
-                {
-                    SpectreDisplay.RenderHistory(history);
-                }
-            }
-            catch (Exception ex)
-            {
-                SpectreDisplay.ShowError($"Could not load chat history: {ex.Message}");
-            }
+            //    if (history != null)
+            //    {
+            //        SpectreDisplay.RenderHistory(history);
+            //    }
+            //}
+            //catch (Exception ex)
+            //{
+            //    SpectreDisplay.ShowError($"Could not load chat history: {ex.Message}");
+            //}
 
             // ── Chat loop ──
             AnsiConsole.MarkupLine("[grey]Type your message and press Enter. Type [bold]/exit[/] to quit.[/]");
@@ -142,7 +143,7 @@ namespace ChatApp.CliClient
 
             while (true)
             {
-                var input = SpectreDisplay.Prompt(">");
+                var input = SpectreDisplay.Prompt("");
 
                 if (string.IsNullOrWhiteSpace(input)) continue;
 

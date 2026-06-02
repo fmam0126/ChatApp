@@ -148,7 +148,7 @@ namespace ChatApp.CliClient
                 AnsiConsole.Cursor.SetPosition(0, bottomRow + 1);
                 //Thread.Sleep(TimeSpan.FromMilliseconds(100));
                 //AnsiConsole.WriteLine();
-                var input = SpectreDisplay.Prompt("> ");
+                var input = SpectreDisplay.Prompt(">");
 
                 if (string.IsNullOrWhiteSpace(input)) continue;
 

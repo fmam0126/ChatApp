@@ -11,12 +11,14 @@ public class TokenService
     private readonly string _secretKey;
     private readonly string _issuer;
     private readonly string _audience;
+    private readonly int _expires;
 
-    public TokenService(string secretKey, string issuer, string audience)
+    public TokenService(string secretKey, string issuer, string audience, int expires)
     {
         _secretKey = secretKey;
         _issuer = issuer;
         _audience = audience;
+        _expires = expires;
     }
 
     public string GenerateToken(User user)
@@ -36,7 +38,7 @@ public class TokenService
             issuer: _issuer,
             audience: _audience,
             claims: claims,
-            expires: DateTime.UtcNow.AddHours(24),
+            expires: DateTime.UtcNow.AddMinutes(_expires),
             signingCredentials: credentials
         );
 

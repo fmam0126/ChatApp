@@ -14,6 +14,7 @@ var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = jwtSettings["SecretKey"]!;
 var issuer = jwtSettings["Issuer"]!;
 var audience = jwtSettings["Audience"]!;
+var expires = int.TryParse(jwtSettings["ExpiresMinutes"], out int expiresValue) ? expiresValue : 60;
 var keyBytes = Encoding.UTF8.GetBytes(secretKey);
 
 // Add services to the container.
@@ -52,7 +53,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuerSigningKey = true,
             ValidIssuer = issuer,
             ValidAudience = audience,
-            IssuerSigningKey = new SymmetricSecurityKey(keyBytes)
+            IssuerSigningKey = new SymmetricSecurityKey(keyBytes),
+            ClockSkew = TimeSpan.Zero // Test Expiry
         };
 
         // Read token from query string for SignalR WebSocket connections
@@ -74,7 +76,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 // Custom services
 builder.Services.AddSingleton(sp =>
-    new TokenService(secretKey, issuer, audience));
+    new TokenService(secretKey, issuer, audience, expires));
 builder.Services.AddSingleton<ConnectedUsersService>();
 
 var app = builder.Build();

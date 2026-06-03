@@ -3,7 +3,6 @@ using ChatApp.CliClient.Interfaces;
 using ChatApp.CliClient.Models;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Configuration;
-using Spectre.Console;
 
 namespace ChatApp.CliClient
 {
@@ -84,10 +83,12 @@ namespace ChatApp.CliClient
                 .WithAutomaticReconnect()
                 .Build();
 
+            var chatConsole = new ChatConsole();
+            chatConsole.Initialize();
+
             connection.On<string, string>("ReceiveMessage", (user, message) =>
             {
-                
-                SpectreDisplay.RenderMessage(user, message);
+                chatConsole.Enqueue(user, message);
             });
 
             connection.Reconnecting += _ =>
@@ -138,33 +139,22 @@ namespace ChatApp.CliClient
             //}
 
             // ── Chat loop ──
-
-            AnsiConsole.MarkupLine("[grey]Type your message and press Enter. Type [bold]/exit[/] to quit.[/]");
-            AnsiConsole.WriteLine();
-
             while (true)
             {
-                int bottomRow = Console.WindowHeight - 1;
-                AnsiConsole.Cursor.SetPosition(0, bottomRow + 1);
-                //Thread.Sleep(TimeSpan.FromMilliseconds(100));
-                //AnsiConsole.WriteLine();
-                var input = SpectreDisplay.Prompt(">");
+                string? input = await chatConsole.ReadInputAsync();
 
                 if (string.IsNullOrWhiteSpace(input)) continue;
 
                 if (input.Equals("/exit", StringComparison.OrdinalIgnoreCase))
-                {
                     break;
-                }
-                AnsiConsole.Cursor.SetPosition(0, bottomRow - 1);
-                //AnsiConsole.WriteLine();
+
                 try
                 {
                     await connection.InvokeAsync("SendMessage", input);
                 }
                 catch (Exception ex)
                 {
-                    SpectreDisplay.ShowError($"Failed to send: {ex.Message}");
+                    chatConsole.Enqueue("System", $"Failed to send: {ex.Message}");
                 }
             }
 

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using Microsoft.AspNetCore.SignalR;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,7 +15,7 @@ var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = jwtSettings["SecretKey"]!;
 var issuer = jwtSettings["Issuer"]!;
 var audience = jwtSettings["Audience"]!;
-var expires = int.TryParse(jwtSettings["ExpiresMinutes"], out int expiresValue) ? expiresValue : 60;
+var expires = int.Parse(jwtSettings["ExpirationMinutes"]!);
 var keyBytes = Encoding.UTF8.GetBytes(secretKey);
 
 // Add services to the container.
@@ -35,7 +36,10 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-builder.Services.AddSignalR();
+builder.Services.AddSignalR(options =>
+{
+    options.AddFilter<JwtExpirationFilter>();
+});
 
 // SQLite persistence (replaces in-memory)
 builder.Services.AddDbContext<ChatContext>(options =>
@@ -75,6 +79,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 // Custom services
+
+
 builder.Services.AddSingleton(sp =>
     new TokenService(secretKey, issuer, audience, expires));
 builder.Services.AddSingleton<ConnectedUsersService>();

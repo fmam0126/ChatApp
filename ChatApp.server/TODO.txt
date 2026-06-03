@@ -3,8 +3,6 @@
 ✅ Message persistence — SQLite database, messages saved in ChatHub.SendMessage
 ✅ Chat history — GET /ChatMessages with ?count= param, authorized, ordered by date
 ✅ Input sanitization — message length limit, control character stripping, username validation
-✅ Spectre.Console CLI — rich terminal UI with colored panels, spinner, table history
-✅ CLI auth flow — prompts for username, gets JWT, uses for SignalR + REST
 ✅ System messages — join/leave notifications broadcast to all clients
 ✅ User connection tracking — ConnectedUsersService with ConcurrentDictionary
 ✅ SignalR security — token from query string for WebSocket connections

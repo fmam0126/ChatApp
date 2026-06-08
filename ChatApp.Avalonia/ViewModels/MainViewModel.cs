@@ -168,17 +168,23 @@ namespace ChatApp.Avalonia.ViewModels
                 });
                 // get initial message history
                 var _chatClient = new ChatClient(ServerUrl, _accessToken);
-
-                List<ChatMessage> chatHistory = (List<ChatMessage>)await _chatClient.GetMessagesAsync();
-                foreach (ChatMessage chatMessage in chatHistory) {
-                    Messages.Add(new MessageViewModel
+                try
+                {
+                    List<ChatMessage> chatHistory = (List<ChatMessage>)await _chatClient.GetMessagesAsync();
+                    foreach (ChatMessage chatMessage in chatHistory)
                     {
-                        Timestamp = chatMessage.Created.ToString("HH:mm:ss"),
-                        Username = chatMessage.SenderName,
-                        Content = chatMessage.Content
-                    });
+                        Messages.Add(new MessageViewModel
+                        {
+                            Timestamp = chatMessage.Created.ToString("HH:mm:ss"),
+                            Username = chatMessage.SenderName,
+                            Content = chatMessage.Content
+                        });
+                    }
                 }
-
+                catch (Exception ex)
+                {
+                    StatusText = $"Failed to load chat history: {ex.Message}";
+                }
                 _hubConnection.Reconnecting += _ =>
                 {
                     Dispatcher.UIThread.Post(() =>

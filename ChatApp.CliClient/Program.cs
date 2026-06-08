@@ -74,7 +74,6 @@ namespace ChatApp.CliClient
 
                 SpectreDisplay.ShowError($"Username '{username}' is already taken. Please choose another.");
             }
-
             // ── Connect to SignalR hub ──
             var connection = new HubConnectionBuilder()
                 .WithUrl($"{settings.ServerUrl}/chatHub", options =>
@@ -86,6 +85,21 @@ namespace ChatApp.CliClient
 
             var chatConsole = new ChatConsole();
             chatConsole.Initialize();
+            // get chat history
+            var chatClient = new ChatClient(settings.ServerUrl, accessToken!);
+            List<ChatMessage> chatHistory = new List<ChatMessage>();
+            try
+            {
+                chatHistory = (List<ChatMessage>)await chatClient.GetMessagesAsync();
+                foreach (var chatMsg in chatHistory)
+                {
+                    chatConsole.Enqueue(chatMsg.SenderName, chatMsg.Content);
+                }
+            } 
+            catch (Exception e) 
+            {
+                SpectreDisplay.ShowError($"Could not load chat history: {e.Message}");
+            }
 
             connection.On<string, string>("ReceiveMessage", (user, message) =>
             {

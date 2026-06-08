@@ -19,7 +19,7 @@ internal class AuthService
         response.EnsureSuccessStatusCode();
 
         var result = await response.Content.ReadFromJsonAsync<LoginResponse>();
-        Console.WriteLine(result.Token);
+        //Console.WriteLine(result.Token);
         return result?.Token;
     }
 

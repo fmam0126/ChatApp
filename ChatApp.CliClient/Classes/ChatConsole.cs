@@ -12,7 +12,7 @@ namespace ChatApp.CliClient.Classes;
 /// </summary>
 internal sealed class ChatConsole
 {
-    private readonly ConcurrentQueue<(string User, string Message)> _pending = new();
+    private readonly ConcurrentQueue<(DateTime Timestamp, string User, string Message)> _pending = new();
     private readonly List<string> _visible = new();
     private readonly Lock _renderLock = new();
 
@@ -42,9 +42,9 @@ internal sealed class ChatConsole
 
     // ── Thread-safe enqueue (called from SignalR callback) ──
 
-    public void Enqueue(string user, string message)
+    public void Enqueue(DateTime timestamp, string user, string message)
     {
-        _pending.Enqueue((user, message));
+        _pending.Enqueue((timestamp, user, message));
     }
 
     // ── Low-level rendering helpers (caller must hold _renderLock) ──
@@ -61,12 +61,12 @@ internal sealed class ChatConsole
         AnsiConsole.Markup(markup);
     }
 
-    private static string FormatMessage(string user, string message)
+    private static string FormatMessage(DateTime timestamp, string user, string message)
     {
-        var now = DateTime.Now.ToString("HH:mm:ss");
+        var timestampString = timestamp.ToString("HH:mm:ss");
         if (user == "System")
-            return $"[grey][[{now}]] [italic]{Markup.Escape(message)}[/][/]";
-        return $"[grey][[{now}]][/] [red]{Markup.Escape(user)}: [/][white]{Markup.Escape(message)}[/]";
+            return $"[grey][[{timestampString}]] [italic]{Markup.Escape(message)}[/][/]";
+        return $"[grey][[{timestampString}]][/] [red]{Markup.Escape(user)}: [/][white]{Markup.Escape(message)}[/]";
     }
 
     // ── Drawing the fixed regions ──
@@ -110,7 +110,7 @@ internal sealed class ChatConsole
         bool added = false;
         while (_pending.TryDequeue(out var m))
         {
-            _visible.Add(FormatMessage(m.User, m.Message));
+            _visible.Add(FormatMessage(m.Timestamp, m.User, m.Message));
             added = true;
         }
 
@@ -150,7 +150,7 @@ internal sealed class ChatConsole
         {
             // Show any messages that arrived since last loop
             Drain();
-            lock (_renderLock) { DrawInput(); }
+            //lock (_renderLock) { DrawInput(); }
 
             // Busy-wait with a short sleep so we can still process incoming messages
             while (!Console.KeyAvailable)
@@ -158,7 +158,7 @@ internal sealed class ChatConsole
                 if (ct.IsCancellationRequested) return "";
                 await Task.Delay(50, ct);
                 Drain();
-                lock (_renderLock) { DrawInput(); }
+                //lock (_renderLock) { DrawInput(); }
             }
 
             ConsoleKeyInfo key = Console.ReadKey(intercept: true);
@@ -210,6 +210,10 @@ internal sealed class ChatConsole
                         _cursorCol++;
                     }
                     break;
+            }
+            lock (_renderLock)
+            {
+                DrawInput();
             }
         }
 

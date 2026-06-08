@@ -93,7 +93,10 @@ namespace ChatApp.CliClient
                 chatHistory = (List<ChatMessage>)await chatClient.GetMessagesAsync();
                 foreach (var chatMsg in chatHistory)
                 {
-                    chatConsole.Enqueue(chatMsg.SenderName, chatMsg.Content);
+
+                    DateTime utcTime = DateTime.SpecifyKind(chatMsg.Created, DateTimeKind.Utc);
+                    
+                    chatConsole.Enqueue(utcTime.ToLocalTime() , chatMsg.SenderName, chatMsg.Content);
                 }
             } 
             catch (Exception e) 
@@ -103,7 +106,7 @@ namespace ChatApp.CliClient
 
             connection.On<string, string>("ReceiveMessage", (user, message) =>
             {
-                chatConsole.Enqueue(user, message);
+                chatConsole.Enqueue(DateTime.Now, user, message);
             });
 
             connection.Reconnecting += _ =>
@@ -132,27 +135,6 @@ namespace ChatApp.CliClient
                 return;
             }
 
-            //// ── Load chat history ──
-            //var chatClient = new ChatClient(settings.ServerUrl, accessToken!);
-            //try
-            //{
-            //    List<ChatMessage>? history = null;
-            //    await SpectreDisplay.ShowSpinner("Loading chat history...", async () =>
-            //    {
-            //        var messages = await chatClient.GetMessagesAsync(50);
-            //        history = messages.ToList();
-            //    });
-
-            //    if (history != null)
-            //    {
-            //        SpectreDisplay.RenderHistory(history);
-            //    }
-            //}
-            //catch (Exception ex)
-            //{
-            //    SpectreDisplay.ShowError($"Could not load chat history: {ex.Message}");
-            //}
-
             // ── Chat loop ──
             while (true)
             {
@@ -169,7 +151,7 @@ namespace ChatApp.CliClient
                 }
                 catch (Exception ex)
                 {
-                    chatConsole.Enqueue("System", $"Failed to send: {ex.Message}");
+                    chatConsole.Enqueue(DateTime.Now, "System", $"Failed to send: {ex.Message}");
                 }
             }
 

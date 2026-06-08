@@ -173,9 +173,10 @@ namespace ChatApp.Avalonia.ViewModels
                     List<ChatMessage> chatHistory = (List<ChatMessage>)await _chatClient.GetMessagesAsync();
                     foreach (ChatMessage chatMessage in chatHistory)
                     {
+                        DateTime utcTime = DateTime.SpecifyKind(chatMessage.Created, DateTimeKind.Utc);
                         Messages.Add(new MessageViewModel
                         {
-                            Timestamp = chatMessage.Created.ToString("HH:mm:ss"),
+                            Timestamp = utcTime.ToLocalTime().ToString("HH:mm:ss"),
                             Username = chatMessage.SenderName,
                             Content = chatMessage.Content
                         });

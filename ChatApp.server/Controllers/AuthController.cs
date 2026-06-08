@@ -2,12 +2,14 @@
 using ChatApp.server.DTO;
 using ChatApp.server.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace ChatApp.server.Controllers
 {
     [Route("auth")]
     [ApiController]
+    [EnableRateLimiting("LoginPolicy")]
     public class AuthController : ControllerBase
     {
         private readonly ChatContext _context;
@@ -38,7 +40,7 @@ namespace ChatApp.server.Controllers
 
             // Find or create user
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Name == username);
-            if (user == null)
+            if (user is null)
             {
                 user = new User { Name = username };
                 _context.Users.Add(user);

@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 using Avalonia.Threading;
+using ChatApp.Avalonia.Models;
 using ChatApp.Avalonia.Services;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Configuration;
@@ -165,6 +166,18 @@ namespace ChatApp.Avalonia.ViewModels
                         });
                     });
                 });
+                // get initial message history
+                var _chatClient = new ChatClient(ServerUrl, _accessToken);
+
+                List<ChatMessage> chatHistory = (List<ChatMessage>)await _chatClient.GetMessagesAsync();
+                foreach (ChatMessage chatMessage in chatHistory) {
+                    Messages.Add(new MessageViewModel
+                    {
+                        Timestamp = chatMessage.Created.ToString("HH:mm:ss"),
+                        Username = chatMessage.SenderName,
+                        Content = chatMessage.Content
+                    });
+                }
 
                 _hubConnection.Reconnecting += _ =>
                 {

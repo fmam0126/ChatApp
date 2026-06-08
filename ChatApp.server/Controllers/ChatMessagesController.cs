@@ -4,6 +4,7 @@ using ChatApp.server.DTO;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace ChatApp.server.Controllers
 {
@@ -46,7 +47,7 @@ namespace ChatApp.server.Controllers
         public async Task<ActionResult<ChatMessageResponseDTO>> Post(ChatMessageDTO newChatMessage)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (userIdClaim == null || !int.TryParse(userIdClaim, out var userId))
+            if (userIdClaim is null || !int.TryParse(userIdClaim, out var userId))
             {
                 return Unauthorized();
             }

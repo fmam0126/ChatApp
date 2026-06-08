@@ -25,6 +25,7 @@ internal sealed class ChatConsole
     public void Initialize()
     {
         Console.CursorVisible = false;
+        AnsiConsole.Cursor.Hide();
         AnsiConsole.Clear();
         RecalcLayout();
     }
@@ -72,6 +73,7 @@ internal sealed class ChatConsole
 
     private void DrawMessageArea()
     {
+        AnsiConsole.Cursor.Hide();
         // Clear
         for (int r = _msgTop; r <= _msgBottom; r++)
             ClearRow(r);
@@ -84,6 +86,7 @@ internal sealed class ChatConsole
 
     private void DrawInstruction()
     {
+        AnsiConsole.Cursor.Hide();
         ClearRow(_instrLine);
         AnsiConsole.Cursor.SetPosition(0, _instrLine);
         AnsiConsole.Markup("[grey]Type your message and press Enter. Type [bold]/exit[/] to quit.[/]");
@@ -91,6 +94,7 @@ internal sealed class ChatConsole
 
     private void DrawInput()
     {
+        AnsiConsole.Cursor.Hide();
         ClearRow(_inputLine);
         // Keep prompt prefix visible even when input is empty
         AnsiConsole.Cursor.SetPosition(0, _inputLine);
@@ -131,6 +135,7 @@ internal sealed class ChatConsole
     /// </summary>
     public async Task<string> ReadInputAsync(CancellationToken ct = default)
     {
+        AnsiConsole.Cursor.Hide();
         _input = "";
         _cursorCol = 0;
 

@@ -41,6 +41,7 @@ namespace ChatApp.CliClient
                 SpectreDisplay.ShowError("ServerUrl is missing in appsettings.json.");
                 return;
             }
+            
 
             // ── Welcome ──
             SpectreDisplay.ShowWelcome();

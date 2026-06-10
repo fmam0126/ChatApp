@@ -1,11 +1,11 @@
 ﻿using System.Net.Http.Headers;
 using System.Text.Json;
-using ChatApp.CliClient.Interfaces;
-using ChatApp.CliClient.Models;
+using ChatApp.Avalonia.Interfaces;
+using ChatApp.Avalonia.Models;
 
-namespace ChatApp.CliClient.Classes
+namespace ChatApp.Avalonia.Services
 {
-    internal class ChatClient : IChatClient
+    public class ChatClient : IChatClient
     {
         private readonly HttpClient _httpClient;
 

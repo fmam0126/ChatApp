@@ -1,6 +1,6 @@
-﻿namespace ChatApp.CliClient.Models
+﻿namespace ChatApp.Avalonia.Models
 {
-    internal class Settings
+    public class Settings
     {
         public required string ServerUrl { get; set; }
     }

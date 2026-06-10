@@ -361,3 +361,8 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+/ChatApp.server/chatapp.db
+/ChatApp.server/chatapp.db-shm
+/ChatApp.server/chatapp.db-wal
+/ChatApp.server/appsettings.json
+/ChatApp.server/appsettings.Development.json

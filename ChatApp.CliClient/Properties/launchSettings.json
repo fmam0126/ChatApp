@@ -1,7 +1,8 @@
 {
   "profiles": {
     "ChatApp.CliClient": {
-      "commandName": "Project"
+      "commandName": "Project",
+      "workingDirectory": "$(ProjectDir)"
     },
     "Container (Dockerfile)": {
       "commandName": "Docker"

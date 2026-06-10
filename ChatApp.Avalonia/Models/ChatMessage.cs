@@ -1,6 +1,6 @@
-﻿namespace ChatApp.CliClient.Models
+﻿namespace ChatApp.Avalonia.Models
 {
-    internal class ChatMessage
+    public class ChatMessage
     {
         public int Id { get; set; }
         public string Content { get; set; } = string.Empty;

@@ -1,17 +1,27 @@
+using ChatApp.server.Class;
 using ChatApp.server.Hubs;
 using ChatApp.server.Models;
-using Microsoft.AspNetCore.Authentication.BearerToken;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
-using Scalar.AspNetCore;
+using System.Text;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Bind JWT settings from configuration
+var jwtSettings = builder.Configuration.GetSection("JwtSettings");
+var secretKey = jwtSettings["SecretKey"]!;
+var issuer = jwtSettings["Issuer"]!;
+var audience = jwtSettings["Audience"]!;
+var expires = int.Parse(jwtSettings["ExpirationMinutes"]!);
+var keyBytes = Encoding.UTF8.GetBytes(secretKey);
+
 // Add services to the container.
-builder.Services.AddAuthentication(BearerTokenDefaults.AuthenticationScheme);
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -28,68 +38,101 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-builder.Services.AddSignalR();
-
-builder.Services.AddDbContext<ChatContext>(options =>
-    options.UseInMemoryDatabase("ChatDatabase"));
-
-builder.Services.AddAuthentication(options =>
+builder.Services.AddSignalR(options =>
 {
-    options.DefaultAuthenticateScheme = BearerTokenDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = BearerTokenDefaults.AuthenticationScheme;
-
-}).AddJwtBearer(options =>
+    options.AddFilter<JwtExpirationFilter>();
+});
+// Global rate limiting: 10 requests per minute per user (or IP if unauthenticated)
+builder.Services.AddRateLimiter(options =>
 {
-    // Configure the Authority to the expected value for
-    // the authentication provider. This ensures the token
-    // is appropriately validated.
-    options.Authority = "Authority URL"; // TODO: Update URL
-
-    // We have to hook the OnMessageReceived event in order to
-    // allow the JWT authentication handler to read the access
-    // token from the query string when a WebSocket or 
-    // Server-Sent Events request comes in.
-
-    // Sending the access token in the query string is required when using WebSockets or ServerSentEvents
-    // due to a limitation in Browser APIs. We restrict it to only calls to the
-    // SignalR hub in this code.
-    // See https://docs.microsoft.com/aspnet/core/signalr/security#access-token-logging
-    // for more information about security considerations when using
-    // the query string to transmit the access token.
-    options.Events = new JwtBearerEvents
-    {
-        OnMessageReceived = context =>
-        {
-            var accessToken = context.Request.Query["access_token"];
-
-            // If the request is for our hub...
-            var path = context.HttpContext.Request.Path;
-            if (!string.IsNullOrEmpty(accessToken) &&
-                (path.StartsWithSegments("/chatHub")))
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.User.Identity?.Name ?? httpContext.Request.Headers.Host.ToString(),
+            factory: partition => new FixedWindowRateLimiterOptions
             {
-                // Read the token out of the query string
-                context.Token = accessToken;
-            }
-            return Task.CompletedTask;
-        }
-    };
+                AutoReplenishment = true,
+                PermitLimit = 10,
+                QueueLimit = 0,
+                Window = TimeSpan.FromSeconds(1)
+            }));
+});
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("LoginPolicy", opt =>
+    {
+        opt.PermitLimit = 4;
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        opt.QueueLimit = 0;
+    });
 });
 
 
+// SQLite Database context
+builder.Services.AddDbContext<ChatContext>(options =>
+    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// JWT Authentication
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = issuer,
+            ValidAudience = audience,
+            IssuerSigningKey = new SymmetricSecurityKey(keyBytes),
+            ClockSkew = TimeSpan.Zero // Test Expiry
+        };
+
+        // Read token from query string for SignalR WebSocket connections
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) &&
+                    path.StartsWithSegments("/chatHub"))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            }
+        };
+    });
+
+// Custom services
+
+
+builder.Services.AddSingleton(sp =>
+    new TokenService(secretKey, issuer, audience, expires));
+builder.Services.AddSingleton<ConnectedUsersService>();
 
 var app = builder.Build();
+
+// Ensure database is created on startup
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ChatContext>();
+    db.Database.EnsureCreated();
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
-    //app.MapScalarApiReference();
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
 app.UseHttpsRedirection();
 
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 

@@ -110,17 +110,17 @@ internal static class SpectreDisplay
     }
 
     public static void ShowError(string message)
-    {
-        AnsiConsole.MarkupLine($"[red][[!]] {Markup.Escape(message)}[/]");
+    { 
+        AnsiConsole.MarkupLine($"\n[red][[!]] {Markup.Escape(message)}[/]");
     }
 
     public static void ShowInfo(string message)
     {
-        AnsiConsole.MarkupLine($"[blue][[i]] {Markup.Escape(message)}[/]");
+        AnsiConsole.MarkupLine($"\n[blue][[i]] {Markup.Escape(message)}[/]");
     }
 
     public static void ShowSuccess(string message)
     {
-        AnsiConsole.MarkupLine($"[green][[✓]] {Markup.Escape(message)}[/]");
+        AnsiConsole.MarkupLine($"\n[green][[✓]] {Markup.Escape(message)}[/]");
     }
 }

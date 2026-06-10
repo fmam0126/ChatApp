@@ -20,8 +20,9 @@ namespace ChatApp.server.Controllers
 
         [HttpGet(Name = "GetChats")]
         [Authorize]
-        public async Task<ActionResult<IEnumerable<ChatMessageResponseDTO>>> Get([FromQuery] int count = 50)
+        public async Task<ActionResult<IEnumerable<ChatMessageResponseDTO>>> Get()
         {
+            int count = 50; // Default number of messages to return
             count = Math.Clamp(count, 1, 200);
             var chatMessages = await _context.ChatMessages
                 .Include(m => m.Sender)

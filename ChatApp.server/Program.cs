@@ -86,7 +86,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidIssuer = issuer,
             ValidAudience = audience,
             IssuerSigningKey = new SymmetricSecurityKey(keyBytes),
-            ClockSkew = TimeSpan.Zero // Test Expiry
+            ClockSkew = TimeSpan.FromMinutes(5)
         };
 
         // Read token from query string for SignalR WebSocket connections

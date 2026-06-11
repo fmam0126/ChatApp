@@ -366,3 +366,5 @@ FodyWeavers.xsd
 /ChatApp.server/chatapp.db-wal
 /ChatApp.server/appsettings.json
 /ChatApp.server/appsettings.Development.json
+/skills
+/AGENTS.md

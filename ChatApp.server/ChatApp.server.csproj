@@ -9,8 +9,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Classic.Avalonia.Theme" Version="11.3.0.3" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.8" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.9" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.8" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.8" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.8" />
@@ -22,6 +22,11 @@
 
   <ItemGroup>
     <Folder Include="Class\" />
+  </ItemGroup>
+
+  <!-- Reference the Blazor WebAssembly project so its static assets are served automatically -->
+  <ItemGroup>
+    <ProjectReference Include="..\ChatApp.Blazor\ChatApp.Blazor.csproj" />
   </ItemGroup>
 
 </Project>

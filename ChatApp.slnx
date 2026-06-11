@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="ChatApp.Avalonia/ChatApp.Avalonia.csproj" Id="48a79170-9adc-45c0-bab3-2d41a5aa6a3f" />
+  <Project Path="ChatApp.Blazor/ChatApp.Blazor.csproj" Id="1bf6270b-5f68-4e12-b603-9fc70b4c7401" />
   <Project Path="ChatApp.CliClient/ChatApp.CliClient.csproj" Id="005e94ab-d941-444f-9c4a-2cdbf2fc5937" />
   <Project Path="ChatApp.server/ChatApp.server.csproj" />
 </Solution>

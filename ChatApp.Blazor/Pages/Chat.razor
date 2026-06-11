@@ -1,0 +1,225 @@
+﻿@page "/chat"
+@rendermode InteractiveWebAssembly
+@using Microsoft.AspNetCore.SignalR.Client
+@using ChatApp.Blazor.Services
+@using System.Text.Json.Serialization
+@inject NavigationManager Navigation
+@inject HttpClient Http
+@inject ChatState State
+@implements IAsyncDisposable
+
+<PageTitle>ChatApp - @State.Username</PageTitle>
+
+<div class="win95-desktop">
+    <div class="win95-window chat-window">
+        <div class="win95-titlebar">
+            <span>ChatApp - @State.Username</span>
+            <WinOldButton OnClick="Disconnect" Appearance="Appearance.Win98">X</WinOldButton>
+        </div>
+        <div class="win95-window-body chat-body">
+            <div class="message-area" @ref="messageArea">
+                @foreach (var msg in messages)
+                {
+                    <div class="message @(msg.IsSystem ? "system-message" : "")">
+                        <span class="timestamp">[@msg.Timestamp]</span>
+                        <span class="username" style="color: @msg.UserColor;">@msg.Username:</span>
+                        <span class="content">@msg.Content</span>
+                    </div>
+                }
+            </div>
+            <div class="input-area">
+                <WinOldTextBox @bind-Value="messageText" Placeholder="Type a message..." Appearance="Appearance.Win98" />
+                <WinOldButton OnClick="SendMessage" Disabled="@(!IsConnected || string.IsNullOrWhiteSpace(messageText))" Appearance="Appearance.Win98">
+                    Send
+                </WinOldButton>
+            </div>
+        </div>
+        <div class="win95-statusbar">
+            @statusText
+        </div>
+    </div>
+</div>
+
+@code {
+    private class ChatMessageResponse
+    {
+        [JsonPropertyName("id")]
+        public int Id { get; set; }
+        [JsonPropertyName("content")]
+        public string Content { get; set; } = string.Empty;
+        [JsonPropertyName("created")]
+        public DateTime Created { get; set; }
+        [JsonPropertyName("senderId")]
+        public int SenderId { get; set; }
+        [JsonPropertyName("senderName")]
+        public string SenderName { get; set; } = string.Empty;
+    }
+
+    private class MessageItem
+    {
+        public string Timestamp { get; set; } = string.Empty;
+        public string Username { get; set; } = string.Empty;
+        public string Content { get; set; } = string.Empty;
+        public string UserColor { get; set; } = "#000000";
+        public bool IsSystem => Username == "System";
+    }
+
+    private static readonly string[] UserColors =
+    [
+        "#0000AA", "#AA0000", "#00AA00", "#AA5500",
+        "#5500AA", "#007777", "#AA0055", "#555555"
+    ];
+
+    private HubConnection? hubConnection;
+    private List<MessageItem> messages = [];
+    private string messageText = string.Empty;
+    private string statusText = "Connecting...";
+    private ElementReference messageArea;
+
+    private bool IsConnected => hubConnection?.State == HubConnectionState.Connected;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!State.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/");
+            return;
+        }
+
+        await ConnectToHub();
+    }
+
+    private async Task ConnectToHub()
+    {
+        try
+        {
+            var token = State.Token;
+
+            hubConnection = new HubConnectionBuilder()
+                .WithUrl(Navigation.ToAbsoluteUri("/chathub"), options =>
+                {
+                    options.AccessTokenProvider = () => Task.FromResult(token)!;
+                })
+                .WithAutomaticReconnect()
+                .Build();
+
+            hubConnection.On<string, string>("ReceiveMessage", (user, message) =>
+            {
+                messages.Add(new MessageItem
+                {
+                    Timestamp = DateTime.Now.ToString("HH:mm:ss"),
+                    Username = user,
+                    Content = message,
+                    UserColor = GetUserColor(user)
+                });
+                InvokeAsync(StateHasChanged);
+            });
+
+            hubConnection.Reconnecting += _ =>
+            {
+                statusText = "Connection lost. Reconnecting...";
+                InvokeAsync(StateHasChanged);
+                return Task.CompletedTask;
+            };
+
+            hubConnection.Reconnected += _ =>
+            {
+                statusText = $"Connected as {State.Username}";
+                InvokeAsync(StateHasChanged);
+                return Task.CompletedTask;
+            };
+
+            hubConnection.Closed += ex =>
+            {
+                statusText = ex == null ? "Disconnected." : $"Connection closed: {ex.Message}";
+                InvokeAsync(StateHasChanged);
+                return Task.CompletedTask;
+            };
+
+            await LoadChatHistory();
+            await hubConnection.StartAsync();
+
+            statusText = $"Connected as {State.Username}";
+        }
+        catch (Exception ex)
+        {
+            statusText = $"Failed to connect: {ex.Message}";
+        }
+    }
+
+    private async Task LoadChatHistory()
+    {
+        try
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get, "/ChatMessages?count=50");
+            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", State.Token);
+            var response = await Http.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+
+            var history = await response.Content.ReadFromJsonAsync<List<ChatMessageResponse>>();
+            if (history != null)
+            {
+                foreach (var msg in history)
+                {
+                    var utcTime = DateTime.SpecifyKind(msg.Created, DateTimeKind.Utc);
+                    messages.Add(new MessageItem
+                    {
+                        Timestamp = utcTime.ToLocalTime().ToString("HH:mm:ss"),
+                        Username = msg.SenderName,
+                        Content = msg.Content,
+                        UserColor = GetUserColor(msg.SenderName)
+                    });
+                }
+            }
+        }
+        catch
+        {
+        }
+    }
+
+    private async Task SendMessage()
+    {
+        var text = messageText.Trim();
+        if (string.IsNullOrEmpty(text) || hubConnection == null) return;
+
+        messageText = string.Empty;
+
+        try
+        {
+            await hubConnection.InvokeAsync("SendMessage", text);
+        }
+        catch (Exception ex)
+        {
+            statusText = $"Failed to send: {ex.Message}";
+        }
+    }
+
+    private async Task Disconnect()
+    {
+        if (hubConnection != null)
+        {
+            await hubConnection.StopAsync();
+            await hubConnection.DisposeAsync();
+            hubConnection = null;
+        }
+
+        State.Token = null;
+        State.Username = null;
+        Navigation.NavigateTo("/");
+    }
+
+    private static string GetUserColor(string username)
+    {
+        if (username == "System") return "#808080";
+        var hash = username.GetHashCode();
+        return UserColors[Math.Abs(hash) % UserColors.Length];
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection != null)
+        {
+            await hubConnection.DisposeAsync();
+        }
+    }
+}

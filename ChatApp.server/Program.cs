@@ -128,7 +128,11 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
     app.UseSwagger();
     app.UseSwaggerUI();
+    app.UseWebAssemblyDebugging();
 }
+
+app.UseBlazorFrameworkFiles();
+app.UseStaticFiles();
 
 app.UseHttpsRedirection();
 
@@ -138,5 +142,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHub<ChatHub>("/chathub");
+
+app.MapFallbackToFile("index.html");
 
 app.Run();

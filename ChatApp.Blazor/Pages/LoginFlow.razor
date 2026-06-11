@@ -1,0 +1,114 @@
+﻿@page "/"
+@page "/login"
+@rendermode InteractiveWebAssembly
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject ChatState State
+@using System.Text.Json.Serialization
+
+<PageTitle>ChatApp - Login</PageTitle>
+
+<div class="win95-desktop">
+    <div class="win95-window login-window">
+        <div class="win95-titlebar">
+            <span>Welcome to ChatApp</span>
+        </div>
+        <div class="win95-window-body">
+            <p class="login-text">Type a username to enter the chat room.</p>
+            <div class="form-row-label">
+                <label for="username">Username:</label>
+            </div>
+            <div class="form-row">
+                @* <label for="username">Username:</label>  *@
+                <WinOldTextBox @bind-Value="username" Placeholder="Enter username (3-30 chars)" InputStyle="width: auto; " Appearance="Appearance.Win98" />
+            </div>
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <p class="error-text">@errorMessage</p>
+            }
+
+            <div class="button-row">
+                <WinOldButton OnClick="Login" Disabled="@(isLoggingIn || string.IsNullOrWhiteSpace(username))" Appearance="Appearance.Win98">
+                    @(isLoggingIn ? "Connecting..." : "Connect")
+                </WinOldButton>
+            </div>
+        </div>
+        <div class="win95-statusbar">
+            @statusText
+        </div>
+    </div>
+</div>
+
+@code {
+    private class AuthResponse
+    {
+        [JsonPropertyName("token")]
+        public string Token { get; set; } = string.Empty;
+        [JsonPropertyName("username")]
+        public string Username { get; set; } = string.Empty;
+        [JsonPropertyName("userId")]
+        public int UserId { get; set; }
+    }
+
+    private string username = string.Empty;
+    private string errorMessage = string.Empty;
+    private string statusText = "Ready";
+    private bool isLoggingIn;
+
+    protected override void OnInitialized()
+    {
+        if (State.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/chat");
+        }
+    }
+
+    private async Task Login()
+    {
+        errorMessage = string.Empty;
+
+        var trimmed = username.Trim();
+        if (trimmed.Length < 3 || trimmed.Length > 30)
+        {
+            errorMessage = "Username must be between 3 and 30 characters.";
+            return;
+        }
+
+        isLoggingIn = true;
+        statusText = "Authenticating...";
+        StateHasChanged();
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync("/auth/login", new { username = trimmed });
+
+            if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+            {
+                errorMessage = $"Username '{trimmed}' is already taken. Choose another.";
+                statusText = "Login failed";
+                return;
+            }
+
+            response.EnsureSuccessStatusCode();
+
+            var result = await response.Content.ReadFromJsonAsync<AuthResponse>();
+            if (result != null)
+            {
+                State.Token = result.Token;
+                State.Username = result.Username;
+                statusText = "Authenticated!";
+                Navigation.NavigateTo("/chat");
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Connection failed: {ex.Message}";
+            statusText = "Error";
+        }
+        finally
+        {
+            isLoggingIn = false;
+        }
+    }
+}

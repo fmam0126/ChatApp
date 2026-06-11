@@ -6,6 +6,7 @@
 @inject NavigationManager Navigation
 @inject HttpClient Http
 @inject ChatState State
+@inject IJSRuntime JS
 @implements IAsyncDisposable
 
 <PageTitle>ChatApp - @State.Username</PageTitle>
@@ -28,7 +29,7 @@
                 }
             </div>
             <div class="input-area">
-                <WinOldTextBox @bind-Value="messageText" Placeholder="Type a message..." Appearance="Appearance.Win98" />
+                <WinOldTextBox @bind-Value="messageText" Placeholder="Type a message..." Appearance="Appearance.Win98" InputStyle="width: 100%;" @onkeydown="@Enter"/>
                 <WinOldButton OnClick="SendMessage" Disabled="@(!IsConnected || string.IsNullOrWhiteSpace(messageText))" Appearance="Appearance.Win98">
                     Send
                 </WinOldButton>
@@ -103,7 +104,7 @@
                 .WithAutomaticReconnect()
                 .Build();
 
-            hubConnection.On<string, string>("ReceiveMessage", (user, message) =>
+            hubConnection.On<string, string>("ReceiveMessage", async (user, message) =>
             {
                 messages.Add(new MessageItem
                 {
@@ -112,7 +113,8 @@
                     Content = message,
                     UserColor = GetUserColor(user)
                 });
-                InvokeAsync(StateHasChanged);
+                await InvokeAsync(StateHasChanged);
+                await ScrollToBottom();
             });
 
             hubConnection.Reconnecting += _ =>
@@ -140,6 +142,8 @@
             await hubConnection.StartAsync();
 
             statusText = $"Connected as {State.Username}";
+            StateHasChanged();
+            await ScrollToBottom();
         }
         catch (Exception ex)
         {
@@ -192,6 +196,22 @@
         {
             statusText = $"Failed to send: {ex.Message}";
         }
+    }
+    private async Task Enter(KeyboardEventArgs e)
+    {
+        if (e.Code == "Enter" || e.Code == "NumpadEnter")
+        {
+            await SendMessage();
+        }
+    }
+
+    private async Task ScrollToBottom()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("eval", "document.querySelector('.message-area').scrollTop = document.querySelector('.message-area').scrollHeight");
+        }
+        catch { }
     }
 
     private async Task Disconnect()

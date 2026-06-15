@@ -17,7 +17,7 @@
             <p class="login-text">Type a username to enter the chat room.</p>
             <div style="margin-right: auto; margin-left: auto; margin-top: auto; margin-bottom: auto;">
             <label>Username:</label>
-            <WinOldTextBox @bind-Value="username" Placeholder="Enter username (3-30 chars)" InputStyle="width: 200px;" Appearance="Appearance.Win98" />
+            <WinOldTextBox @bind-Value="username" Placeholder="Enter username (3-30 chars)" InputStyle="width: 200px;" Appearance="Appearance.Win98" onkeydown="@Enter"/>
             </div>
 
             @if (!string.IsNullOrEmpty(errorMessage))
@@ -52,6 +52,14 @@
     private string errorMessage = string.Empty;
     private string statusText = "Ready";
     private bool isLoggingIn;
+
+    private async Task Enter(KeyboardEventArgs e)
+    {
+        if (e.Code == "Enter" || e.Code == "NumpadEnter")
+        {
+            await Login();
+        }
+    }
 
     protected override void OnInitialized()
     {

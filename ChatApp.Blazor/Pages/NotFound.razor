@@ -1,15 +1,18 @@
-﻿@page "/not-found"
-@layout MainLayout
+@page "/not-found"
+
 <div class="win95-desktop">
-    <div class="win95-window">
-        <div class="win95-titlebar">
-        <span>Not Found</span>    
+    <div class="desktop-window" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 300px; min-height: 150px;">
+        <div class="desktop-window-titlebar">
+            <span class="desktop-window-title">Not Found</span>
         </div>
-        <div class="win95-window-body">
+        <div class="desktop-window-body">
             <h3>Not Found</h3>
-            <p>We can't find the page you're looking for</p>
+            <p>We can't find the page you're looking for.</p>
+            <div class="button-row">
+                <a href="/" style="text-decoration: none;">
+                    <button class="taskbar-start-button" style="font-weight: normal; cursor: pointer;">Go to Desktop</button>
+                </a>
+            </div>
         </div>
-
     </div>
-
 </div>

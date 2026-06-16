@@ -1,0 +1,63 @@
+@page "/"
+@rendermode InteractiveWebAssembly
+@using ChatApp.Blazor.Models
+@using ChatApp.Blazor.Services
+@using ChatApp.Blazor.Components
+@inject WindowManager Manager
+@inject ChatState Chat
+@implements IDisposable
+
+<PageTitle>ChatApp - Windows 95</PageTitle>
+
+<div class="win95-desktop" @onclick="HandleDesktopClick">
+    <div class="desktop-icons-area">
+        <DesktopIcon Title="Chat Client" IconSrc="icons/chat.png" OnDoubleClick="OpenChatWindow" />
+
+        @if (Chat.IsAuthenticated)
+        {
+            <DesktopIcon Title="Log Out" IconSrc="icons/logout.png" OnDoubleClick="LogOut" />
+        }
+    </div>
+
+    <div class="desktop-windows-area">
+        @foreach (var w in Manager.OpenWindows.OrderBy(w => w.ZIndex))
+        {
+            <DesktopWindow State="w">
+                <ChatWindowContent Window="w" />
+            </DesktopWindow>
+        }
+    </div>
+
+    <Taskbar />
+</div>
+
+
+@code {
+    protected override void OnInitialized()
+    {
+        Manager.OnChanged += HandleWindowsChanged;
+    }
+
+    private void HandleWindowsChanged() => InvokeAsync(StateHasChanged);
+
+    private void OpenChatWindow()
+    {
+        var title = Chat.IsAuthenticated ? $"ChatApp - {Chat.Username}" : "Welcome to ChatApp";
+        Manager.OpenWindow(WindowContentType.Chat, title);
+    }
+
+    private void LogOut()
+    {
+        foreach (var w in Manager.OpenWindows.ToList())
+            Manager.CloseWindow(w.Id);
+        Chat.Token = null;
+        Chat.Username = null;
+    }
+
+    private void HandleDesktopClick() => StateHasChanged();
+
+    public void Dispose()
+    {
+        Manager.OnChanged -= HandleWindowsChanged;
+    }
+}

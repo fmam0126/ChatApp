@@ -1,0 +1,102 @@
+@using ChatApp.Blazor.Models
+@using ChatApp.Blazor.Services
+@using Microsoft.JSInterop
+@inject IJSRuntime JS
+@inject WindowManager Manager
+@implements IAsyncDisposable
+
+<div class="desktop-window @GetStateClasses()"
+     style="@GetPositionStyle()"
+     @ref="_windowRef">
+
+    <div class="desktop-window-titlebar"
+         @ref="_titlebarRef"
+         @onmousedown="HandleTitlebarMouseDown">
+        <span class="desktop-window-title">@State.Title</span>
+        <div class="desktop-window-controls">
+            <WinOldButton OnClick="@(() => Manager.MinimizeWindow(State.Id))"
+                          Appearance="Appearance.Win98"
+                          Class="win95-title-btn"
+                          Style="width: 22px; height: 20px; font-size: 11px; padding: 0; min-width: 22px; line-height: 1;">
+                _
+            </WinOldButton>
+            <WinOldButton OnClick="@(() => Manager.ToggleMaximize(State.Id))"
+                          Appearance="Appearance.Win98"
+                          Class="win95-title-btn"
+                          Style="width: 22px; height: 20px; font-size: 11px; padding: 0; min-width: 22px; line-height: 1;">
+                @(State.IsMaximized ? "❐" : "□")
+            </WinOldButton>
+            <WinOldButton OnClick="@(() => Manager.CloseWindow(State.Id))"
+                          Appearance="Appearance.Win98"
+                          Class="win95-title-btn"
+                          Style="width: 22px; height: 20px; font-size: 11px; padding: 0; min-width: 22px; line-height: 1;">
+                X
+            </WinOldButton>
+        </div>
+    </div>
+
+    <div class="desktop-window-body">
+        @ChildContent
+    </div>
+
+    @if (ShowStatusBar)
+    {
+        <div class="win95-statusbar">@StatusText</div>
+    }
+</div>
+
+@code {
+    [Parameter] public required WindowState State { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public bool ShowStatusBar { get; set; }
+    [Parameter] public string StatusText { get; set; } = string.Empty;
+
+    private ElementReference _windowRef;
+    private ElementReference _titlebarRef;
+    private DotNetObjectReference<DesktopWindow>? _dotnetRef;
+    private bool _dragInitialized;
+
+    private string GetStateClasses()
+    {
+        var classes = new List<string>();
+        if (State.IsMinimized) classes.Add("is-minimized");
+        if (State.IsMaximized) classes.Add("is-maximized");
+        if (State.IsActive) classes.Add("is-active");
+        return string.Join(" ", classes);
+    }
+
+    private string GetPositionStyle()
+    {
+        if (State.IsMinimized)
+            return $"z-index: {State.ZIndex};";
+        if (State.IsMaximized)
+            return $"z-index: {State.ZIndex};";
+        return $"left: {State.X}px; top: {State.Y}px; width: {State.Width}px; height: {State.Height}px; z-index: {State.ZIndex};";
+    }
+
+    private async Task HandleTitlebarMouseDown()
+    {
+        Manager.FocusWindow(State.Id);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_dragInitialized && !State.IsMaximized)
+        {
+            _dragInitialized = true;
+            _dotnetRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("DesktopInterop.makeDraggable", _windowRef, _titlebarRef, _dotnetRef);
+        }
+    }
+
+    [JSInvokable]
+    public void OnDragEnd(double x, double y)
+    {
+        Manager.UpdateWindowPosition(State.Id, x, y);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _dotnetRef?.Dispose();
+    }
+}

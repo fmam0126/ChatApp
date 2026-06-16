@@ -1,0 +1,82 @@
+@using ChatApp.Blazor.Services
+@using Microsoft.JSInterop
+@inject WindowManager Manager
+@implements IDisposable
+
+<div class="taskbar">
+    <button class="taskbar-start-button" @onclick="ToggleStartMenu">
+        <span style="font-size: 14px;">🖿</span>
+        <span>Start</span>
+    </button>
+
+    <div class="taskbar-separator"></div>
+
+    <div class="taskbar-windows">
+        @foreach (var w in Manager.OpenWindows.OrderBy(w => w.Id != _focusedId))
+        {
+            <button class="taskbar-window-button @(w.IsActive && !w.IsMinimized ? "active" : "")"
+                    @onclick="@(() => Manager.ToggleWindow(w.Id))"
+                    title="@w.Title">
+                @w.Title
+            </button>
+        }
+    </div>
+
+    <div class="taskbar-tray">
+        <span>@DateTime.Now.ToString("HH:mm")</span>
+    </div>
+</div>
+
+@code {
+    private string? _focusedId;
+    private CancellationTokenSource? _clockCts;
+
+    protected override void OnInitialized()
+    {
+        Manager.OnChanged += HandleWindowsChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _clockCts = new CancellationTokenSource();
+            _ = RunClock(_clockCts.Token);
+        }
+    }
+
+    private async Task RunClock(CancellationToken ct)
+    {
+        while (!ct.IsCancellationRequested)
+        {
+            try
+            {
+                await Task.Delay(10000, ct);
+                await InvokeAsync(StateHasChanged);
+            }
+            catch (TaskCanceledException)
+            {
+                break;
+            }
+        }
+    }
+
+    private void HandleWindowsChanged()
+    {
+        var active = Manager.OpenWindows.FirstOrDefault(w => w.IsActive);
+        _focusedId = active?.Id;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void ToggleStartMenu()
+    {
+        // Start menu is a nice-to-have for later
+    }
+
+    public void Dispose()
+    {
+        Manager.OnChanged -= HandleWindowsChanged;
+        _clockCts?.Cancel();
+        _clockCts?.Dispose();
+    }
+}

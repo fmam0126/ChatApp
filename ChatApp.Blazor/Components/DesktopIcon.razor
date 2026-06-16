@@ -1,0 +1,33 @@
+<div class="desktop-icon @(IsSelected ? "selected" : "")"
+     @ondblclick="HandleDoubleClick"
+     @onclick="HandleClick"
+     tabindex="0">
+    <div class="desktop-icon-image">
+        <img src="@IconSrc" alt="@Title" draggable="false" />
+    </div>
+    <span class="desktop-icon-label">@Title</span>
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = string.Empty;
+    [Parameter] public string IconSrc { get; set; } = "icons/chat.png";
+    [Parameter] public EventCallback OnDoubleClick { get; set; }
+
+    public bool IsSelected { get; private set; }
+
+    private async Task HandleClick()
+    {
+        IsSelected = true;
+    }
+
+    private async Task HandleDoubleClick()
+    {
+        IsSelected = true;
+        await OnDoubleClick.InvokeAsync();
+    }
+
+    public void Deselect()
+    {
+        IsSelected = false;
+    }
+}

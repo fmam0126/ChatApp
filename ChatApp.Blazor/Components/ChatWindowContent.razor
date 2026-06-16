@@ -1,0 +1,323 @@
+@rendermode InteractiveWebAssembly
+@using Microsoft.AspNetCore.SignalR.Client
+@using System.Text.Json.Serialization
+@using ChatApp.Blazor.Models
+@using ChatApp.Blazor.Services
+@inject NavigationManager Navigation
+@inject HttpClient Http
+@inject ChatState Chat
+@inject IJSRuntime JS
+@inject WindowManager Manager
+@implements IAsyncDisposable
+
+@* ── LOGIN STATE ── *@
+@if (_view == "login")
+{
+    <div class="login-content">
+        <p class="login-text">Type a username to enter the chat room.</p>
+        <div class="login-input-row">
+            <label class="login-label">Username:</label>
+            <WinOldTextBox @bind-Value="_username"
+                           Placeholder="Enter username (3-30 chars)"
+                           InputStyle="width: 200px;"
+                           Appearance="Appearance.Win98"
+                           @onkeydown="@EnterLogin" />
+        </div>
+
+        @if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            <p class="error-text">@_errorMessage</p>
+        }
+
+        <div class="button-row">
+            <WinOldButton OnClick="Login"
+                          Disabled="@(_isLoggingIn || string.IsNullOrWhiteSpace(_username))"
+                          Appearance="Appearance.Win98">
+                @(_isLoggingIn ? "Connecting..." : "Connect")
+            </WinOldButton>
+        </div>
+    </div>
+}
+@* ── CHAT STATE ── *@
+else if (_view == "chat")
+{
+    <div class="chat-body">
+        <div class="message-area" @ref="_messageArea">
+            @foreach (var msg in _messages)
+            {
+                <div class="message @(msg.IsSystem ? "system-message" : "")">
+                    <span class="timestamp">[@msg.Timestamp]</span>
+                    <span class="username" style="color: @msg.UserColor;">@msg.Username:</span>
+                    <span class="content">@msg.Content</span>
+                </div>
+            }
+        </div>
+        <div class="input-area">
+            <WinOldTextBox @bind-Value="_messageText"
+                           Placeholder="Type a message..."
+                           Appearance="Appearance.Win98"
+                           InputStyle="width: 100%;"
+                           @onkeydown="@EnterSend" />
+            <WinOldButton OnClick="SendMessage"
+                          Disabled="@(!IsConnected || string.IsNullOrWhiteSpace(_messageText))"
+                          Appearance="Appearance.Win98">
+                Send
+            </WinOldButton>
+        </div>
+    </div>
+}
+
+@* ── STATUSBAR (both states) ── *@
+<div class="win95-statusbar">@_statusText</div>
+
+@code {
+    // ── JSON models ──
+    private class ChatMessageResponse
+    {
+        [JsonPropertyName("id")] public int Id { get; set; }
+        [JsonPropertyName("content")] public string Content { get; set; } = string.Empty;
+        [JsonPropertyName("created")] public DateTime Created { get; set; }
+        [JsonPropertyName("senderId")] public int SenderId { get; set; }
+        [JsonPropertyName("senderName")] public string SenderName { get; set; } = string.Empty;
+    }
+
+    private class AuthResponse
+    {
+        [JsonPropertyName("token")] public string Token { get; set; } = string.Empty;
+        [JsonPropertyName("username")] public string Username { get; set; } = string.Empty;
+        [JsonPropertyName("userId")] public int UserId { get; set; }
+    }
+
+    private class MessageItem
+    {
+        public string Timestamp { get; set; } = string.Empty;
+        public string Username { get; set; } = string.Empty;
+        public string Content { get; set; } = string.Empty;
+        public string UserColor { get; set; } = "#000000";
+        public bool IsSystem => Username == "System";
+    }
+
+    private static readonly string[] UserColors =
+    [
+        "#0000AA", "#AA0000", "#00AA00", "#AA5500",
+        "#5500AA", "#007777", "#AA0055", "#555555"
+    ];
+
+    [Parameter] public WindowState Window { get; set; } = default!;
+
+    // ── View state ──
+    private string _view = "login";
+    private string _username = string.Empty;
+    private string _errorMessage = string.Empty;
+    private bool _isLoggingIn;
+
+    // ── Chat state ──
+    private HubConnection? _hubConnection;
+    private List<MessageItem> _messages = [];
+    private string _messageText = string.Empty;
+    private string _statusText = "Ready";
+    private ElementReference _messageArea;
+
+    private bool IsConnected => _hubConnection?.State == HubConnectionState.Connected;
+
+    protected override void OnInitialized()
+    {
+        if (Chat.IsAuthenticated)
+        {
+            // Already authenticated — skip login, go straight to chat
+            _view = "chat";
+            _statusText = "Connecting...";
+            // Connect in OnAfterRenderAsync to ensure element refs are available
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _view == "chat")
+        {
+            await ConnectToHub();
+        }
+    }
+
+    // ═══ LOGIN ═══
+    private async Task EnterLogin(KeyboardEventArgs e)
+    {
+        if (e.Code == "Enter" || e.Code == "NumpadEnter")
+            await Login();
+    }
+
+    private async Task Login()
+    {
+        _errorMessage = string.Empty;
+        var trimmed = _username.Trim();
+        if (trimmed.Length < 3 || trimmed.Length > 30)
+        {
+            _errorMessage = "Username must be between 3 and 30 characters.";
+            return;
+        }
+
+        _isLoggingIn = true;
+        _statusText = "Authenticating...";
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync("/auth/login", new { username = trimmed });
+
+            if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+            {
+                _errorMessage = $"Username '{trimmed}' is already taken. Choose another.";
+                _statusText = "Login failed";
+                return;
+            }
+
+            response.EnsureSuccessStatusCode();
+            var result = await response.Content.ReadFromJsonAsync<AuthResponse>();
+            if (result != null)
+            {
+                Chat.Token = result.Token;
+                Chat.Username = result.Username;
+                Manager.UpdateWindowTitle(Window.Id, $"ChatApp - {result.Username}");
+                _view = "chat";
+                _statusText = "Connecting...";
+                StateHasChanged();
+                await ConnectToHub();
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Connection failed: {ex.Message}";
+            _statusText = "Error";
+        }
+        finally
+        {
+            _isLoggingIn = false;
+        }
+    }
+
+    // ═══ CHAT ═══
+    private async Task ConnectToHub()
+    {
+        try
+        {
+            var token = Chat.Token;
+            _hubConnection = new HubConnectionBuilder()
+                .WithUrl(Navigation.ToAbsoluteUri("/chathub"), options =>
+                {
+                    options.AccessTokenProvider = () => Task.FromResult(token)!;
+                })
+                .WithAutomaticReconnect()
+                .Build();
+
+            _hubConnection.On<string, string>("ReceiveMessage", async (user, message) =>
+            {
+                _messages.Add(new MessageItem
+                {
+                    Timestamp = DateTime.Now.ToString("HH:mm:ss"),
+                    Username = user,
+                    Content = message,
+                    UserColor = GetUserColor(user)
+                });
+                await InvokeAsync(StateHasChanged);
+                await ScrollToBottom();
+            });
+
+            _hubConnection.Reconnecting += _ =>
+            {
+                _statusText = "Connection lost. Reconnecting...";
+                InvokeAsync(StateHasChanged);
+                return Task.CompletedTask;
+            };
+
+            _hubConnection.Reconnected += _ =>
+            {
+                _statusText = $"Connected as {Chat.Username}";
+                InvokeAsync(StateHasChanged);
+                return Task.CompletedTask;
+            };
+
+            _hubConnection.Closed += ex =>
+            {
+                _statusText = ex == null ? "Disconnected." : $"Connection closed: {ex.Message}";
+                InvokeAsync(StateHasChanged);
+                return Task.CompletedTask;
+            };
+
+            await LoadChatHistory();
+            await _hubConnection.StartAsync();
+            _statusText = $"Connected as {Chat.Username}";
+            StateHasChanged();
+            await ScrollToBottom();
+        }
+        catch (Exception ex)
+        {
+            _statusText = $"Failed to connect: {ex.Message}";
+        }
+    }
+
+    private async Task LoadChatHistory()
+    {
+        try
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get, "/ChatMessages?count=50");
+            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", Chat.Token);
+            var response = await Http.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+
+            var history = await response.Content.ReadFromJsonAsync<List<ChatMessageResponse>>();
+            if (history != null)
+            {
+                foreach (var msg in history)
+                {
+                    var utcTime = DateTime.SpecifyKind(msg.Created, DateTimeKind.Utc);
+                    _messages.Add(new MessageItem
+                    {
+                        Timestamp = utcTime.ToLocalTime().ToString("HH:mm:ss"),
+                        Username = msg.SenderName,
+                        Content = msg.Content,
+                        UserColor = GetUserColor(msg.SenderName)
+                    });
+                }
+            }
+        }
+        catch { }
+    }
+
+    private async Task SendMessage()
+    {
+        var text = _messageText.Trim();
+        if (string.IsNullOrEmpty(text) || _hubConnection == null) return;
+        _messageText = string.Empty;
+
+        try { await _hubConnection.InvokeAsync("SendMessage", text); }
+        catch (Exception ex) { _statusText = $"Failed to send: {ex.Message}"; }
+    }
+
+    private async Task EnterSend(KeyboardEventArgs e)
+    {
+        if (e.Code == "Enter" || e.Code == "NumpadEnter")
+            await SendMessage();
+    }
+
+    private async Task ScrollToBottom()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("eval",
+                "document.querySelector('.message-area').scrollTop = document.querySelector('.message-area').scrollHeight");
+        }
+        catch { }
+    }
+
+    private static string GetUserColor(string username)
+    {
+        if (username == "System") return "#808080";
+        var hash = username.GetHashCode();
+        return UserColors[Math.Abs(hash) % UserColors.Length];
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hubConnection != null)
+            await _hubConnection.DisposeAsync();
+    }
+}

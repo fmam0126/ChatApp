@@ -1,4 +1,7 @@
 window.DesktopInterop = {
+    scrollToBottom: function (element) {
+        if (element) element.scrollTop = element.scrollHeight;
+    },
     makeDraggable: function (element, titlebar, dotnetRef) {
         let offsetX = 0, offsetY = 0;
         let isDragging = false;

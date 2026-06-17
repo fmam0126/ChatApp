@@ -5,7 +5,6 @@
 @using ChatApp.Blazor.Services
 @inject NavigationManager Navigation
 @inject HttpClient Http
-@inject ChatState Chat
 @inject IJSRuntime JS
 @inject WindowManager Manager
 @implements IAsyncDisposable
@@ -105,6 +104,11 @@ else if (_view == "chat")
 
     [Parameter] public WindowState Window { get; set; } = default!;
 
+    // ── Per-window auth state ──
+    private string? _token;
+    private string? _authUsername;
+    private bool _isAuthenticated => !string.IsNullOrEmpty(_token);
+
     // ── View state ──
     private string _view = "login";
     private string _username = string.Empty;
@@ -122,13 +126,7 @@ else if (_view == "chat")
 
     protected override void OnInitialized()
     {
-        if (Chat.IsAuthenticated)
-        {
-            // Already authenticated — skip login, go straight to chat
-            _view = "chat";
-            _statusText = "Connecting...";
-            // Connect in OnAfterRenderAsync to ensure element refs are available
-        }
+        // Each window starts fresh — no shared auth state
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -174,8 +172,8 @@ else if (_view == "chat")
             var result = await response.Content.ReadFromJsonAsync<AuthResponse>();
             if (result != null)
             {
-                Chat.Token = result.Token;
-                Chat.Username = result.Username;
+                _token = result.Token;
+                _authUsername = result.Username;
                 Manager.UpdateWindowTitle(Window.Id, $"ChatApp - {result.Username}");
                 _view = "chat";
                 _statusText = "Connecting...";
@@ -199,7 +197,7 @@ else if (_view == "chat")
     {
         try
         {
-            var token = Chat.Token;
+            var token = _token;
             _hubConnection = new HubConnectionBuilder()
                 .WithUrl(Navigation.ToAbsoluteUri("/chathub"), options =>
                 {
@@ -230,7 +228,7 @@ else if (_view == "chat")
 
             _hubConnection.Reconnected += _ =>
             {
-                _statusText = $"Connected as {Chat.Username}";
+                _statusText = $"Connected as {_authUsername}";
                 InvokeAsync(StateHasChanged);
                 return Task.CompletedTask;
             };
@@ -244,7 +242,7 @@ else if (_view == "chat")
 
             await LoadChatHistory();
             await _hubConnection.StartAsync();
-            _statusText = $"Connected as {Chat.Username}";
+            _statusText = $"Connected as {_authUsername}";
             StateHasChanged();
             await ScrollToBottom();
         }
@@ -259,7 +257,7 @@ else if (_view == "chat")
         try
         {
             var request = new HttpRequestMessage(HttpMethod.Get, "/ChatMessages?count=50");
-            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", Chat.Token);
+            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _token);
             var response = await Http.SendAsync(request);
             response.EnsureSuccessStatusCode();
 
@@ -302,8 +300,7 @@ else if (_view == "chat")
     {
         try
         {
-            await JS.InvokeVoidAsync("eval",
-                "document.querySelector('.message-area').scrollTop = document.querySelector('.message-area').scrollHeight");
+            await JS.InvokeVoidAsync("DesktopInterop.scrollToBottom", _messageArea);
         }
         catch { }
     }

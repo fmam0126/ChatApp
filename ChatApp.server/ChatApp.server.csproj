@@ -24,6 +24,10 @@
     <Folder Include="Class\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="ChatApp.Server.Tests" />
+  </ItemGroup>
+
   <!-- Reference the Blazor WebAssembly project so its static assets are served automatically -->
   <ItemGroup>
     <ProjectReference Include="..\ChatApp.Blazor\ChatApp.Blazor.csproj" />

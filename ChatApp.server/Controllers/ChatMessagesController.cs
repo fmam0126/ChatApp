@@ -34,7 +34,7 @@ namespace ChatApp.server.Controllers
                     Content = m.Content,
                     Created = m.Created,
                     SenderId = m.SenderId,
-                    SenderName = m.Sender.Name
+                    SenderName = m.Sender != null ? m.Sender.Name : "Unknown"
                 })
                 .ToListAsync();
 
@@ -63,7 +63,7 @@ namespace ChatApp.server.Controllers
             await _context.SaveChangesAsync();
 
             // Load the sender name for the response
-            await _context.Entry(chatMessage).Reference(m => m.Sender).LoadAsync();
+            var sender = await _context.Users.FindAsync(chatMessage.SenderId);
 
             return Ok(new ChatMessageResponseDTO
             {
@@ -71,7 +71,7 @@ namespace ChatApp.server.Controllers
                 Content = chatMessage.Content,
                 Created = chatMessage.Created,
                 SenderId = chatMessage.SenderId,
-                SenderName = chatMessage.Sender.Name
+                SenderName = sender?.Name ?? "Unknown"
             });
         }
     }

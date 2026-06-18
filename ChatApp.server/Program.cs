@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using System.Net;
 using System.Text;
 using System.Threading.RateLimiting;
 
@@ -43,10 +44,12 @@ builder.Services.AddSignalR(options =>
     options.AddFilter<JwtExpirationFilter>();
 });
 // Global rate limiting: 10 requests per minute per user (or IP if unauthenticated)
-builder.Services.AddRateLimiter(options =>
+builder.Services.AddRateLimiter((options) =>
 {
+    options.RejectionStatusCode = 429;
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
-        RateLimitPartition.GetFixedWindowLimiter(
+    {
+        return RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: httpContext.User.Identity?.Name ?? httpContext.Request.Headers.Host.ToString(),
             factory: partition => new FixedWindowRateLimiterOptions
             {
@@ -54,13 +57,16 @@ builder.Services.AddRateLimiter(options =>
                 PermitLimit = 10,
                 QueueLimit = 0,
                 Window = TimeSpan.FromSeconds(1)
-            }));
-});
 
+            });
+    });
+});
 builder.Services.AddRateLimiter(options =>
 {
+    options.RejectionStatusCode = 429;
     options.AddFixedWindowLimiter("LoginPolicy", opt =>
     {
+        opt.AutoReplenishment = true;
         opt.PermitLimit = 4;
         opt.Window = TimeSpan.FromMinutes(1);
         opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;

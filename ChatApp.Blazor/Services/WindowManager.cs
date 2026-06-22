@@ -14,6 +14,14 @@ public class WindowManager
 
     public WindowState OpenWindow(WindowContentType type, string title, double? width = null, double? height = null)
     {
+        // Only one window per content type — focus existing if already open
+        var existing = _windows.FirstOrDefault(w => w.ContentType == type);
+        if (existing != null)
+        {
+            FocusWindow(existing.Id);
+            return existing;
+        }
+
         var window = new WindowState
         {
             ContentType = type,

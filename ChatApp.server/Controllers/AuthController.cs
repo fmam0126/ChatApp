@@ -22,7 +22,13 @@ namespace ChatApp.server.Controllers
             _tokenService = tokenService;
             _connectedUsers = connectedUsers;
         }
-
+        /// <summary>
+        /// Handles user login requests. Validates the provided username, checks for active connections with the same username, and either finds or creates a user in the database. 
+        /// If successful, generates a JWT token for the user and returns it along with the username and user ID. 
+        /// If the username is invalid or already taken by an active connection, returns an appropriate error response.
+        /// </summary>
+        /// <param name="request">The login request containing the username.</param>
+        /// <returns>The result of the login operation.</returns>
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequestDTO request)
         {

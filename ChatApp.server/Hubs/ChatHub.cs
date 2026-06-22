@@ -17,7 +17,12 @@ namespace ChatApp.server.Hubs
             _context = context;
             _connectedUsers = connectedUsers;
         }
-
+        /// <summary>
+        /// Handles new client connections to the chat hub. 
+        /// When a client connects, it retrieves the username from the JWT token claims and attempts to add the user to the list of active users.
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="HubException">thrown when the username is already taken</exception>
         public override async Task OnConnectedAsync()
         {
             var username = Context.User?.FindFirst(ClaimTypes.Name)?.Value
@@ -32,7 +37,12 @@ namespace ChatApp.server.Hubs
             await Clients.All.SendAsync("ReceiveMessage", "System", $"{username} has joined the chat.");
             await base.OnConnectedAsync();
         }
-
+        /// <summary>
+        /// Handles client disconnections from the chat hub. 
+        /// When a client disconnects, it retrieves the username associated with the connection ID and removes the user from the list of active users.
+        /// </summary>
+        /// <param name="exception">The exception that occurred during disconnection.</param>
+        /// <returns></returns>
         public override async Task OnDisconnectedAsync(Exception? exception)
         {
             var username = _connectedUsers.GetUsername(Context.ConnectionId);
@@ -43,7 +53,13 @@ namespace ChatApp.server.Hubs
             }
             await base.OnDisconnectedAsync(exception);
         }
-
+        /// <summary>
+        /// Handles incoming chat messages from clients. 
+        /// When a client sends a message, it retrieves the username and user ID from the JWT token claims, sanitizes the input message, and saves it to the database. 
+        /// The message is then broadcast to all connected clients with the sender's username.
+        /// </summary>
+        /// <param name="message">The chat message to send.</param>
+        /// <returns></returns>
         public async Task SendMessage(string message)
         {
             var username = Context.User?.FindFirst(ClaimTypes.Name)?.Value

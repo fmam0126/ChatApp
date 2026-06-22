@@ -17,7 +17,11 @@ namespace ChatApp.server.Controllers
         {
             _context = context;
         }
-
+        /// <summary>
+        /// Handles GET requests to retrieve chat messages. The endpoint is protected by authorization, requiring a valid JWT token. 
+        /// It retrieves the most recent chat messages from the database, including the sender's name, and returns them in chronological order. 
+        /// </summary>
+        /// <returns>The list of chat messages.</returns>
         [HttpGet(Name = "GetChats")]
         [Authorize]
         public async Task<ActionResult<IEnumerable<ChatMessageResponseDTO>>> Get()
@@ -43,6 +47,13 @@ namespace ChatApp.server.Controllers
             return Ok(chatMessages);
         }
 
+        /// <summary>
+        /// Handles POST requests to create new chat messages. The endpoint is protected by authorization, requiring a valid JWT token. 
+        /// It associates the new chat message with the authenticated user as the sender and saves it to the database.
+        /// Currently unused as chat messages are created through SignalR.
+        /// </summary>
+        /// <param name="newChatMessage">The DTO containing the details of the new chat message.</param>
+        /// <returns>The created chat message.</returns>
         [HttpPost(Name = "PostChat")]
         [Authorize]
         public async Task<ActionResult<ChatMessageResponseDTO>> Post(ChatMessageDTO newChatMessage)

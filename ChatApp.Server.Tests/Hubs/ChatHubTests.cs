@@ -14,6 +14,7 @@ public class ChatHubTests : IDisposable
     private readonly SqliteConnection _connection;
     private readonly ConnectedUsersService _connectedUsers;
     private readonly ChatContext _dbContext;
+    private readonly ChatMetrics _metrics;
     private readonly Mock<IHubCallerClients> _mockClients;
     private readonly Mock<IClientProxy> _mockAll;
     private readonly ChatHub _hub;
@@ -31,6 +32,7 @@ public class ChatHubTests : IDisposable
         _dbContext.Database.EnsureCreated();
 
         _connectedUsers = new ConnectedUsersService();
+        _metrics = new ChatMetrics();
 
         _mockAll = new Mock<IClientProxy>();
         _mockAll.Setup(m => m.SendCoreAsync(
@@ -40,7 +42,7 @@ public class ChatHubTests : IDisposable
         _mockClients = new Mock<IHubCallerClients>();
         _mockClients.Setup(c => c.All).Returns(_mockAll.Object);
 
-        _hub = new ChatHub(_dbContext, _connectedUsers)
+        _hub = new ChatHub(_dbContext, _connectedUsers, _metrics)
         {
             Clients = _mockClients.Object,
             Context = CreateMockContext("testuser", "1", "conn-test-1").Object
@@ -146,7 +148,7 @@ public class ChatHubTests : IDisposable
         _dbContext.Users.Add(new User { Id = 42, Name = "sender" });
         _dbContext.SaveChanges();
 
-        var hub = new ChatHub(_dbContext, _connectedUsers)
+        var hub = new ChatHub(_dbContext, _connectedUsers, _metrics)
         {
             Clients = _mockClients.Object,
             Context = CreateMockContext("sender", "42", "conn-send-1").Object
@@ -177,7 +179,7 @@ public class ChatHubTests : IDisposable
         _dbContext.Users.Add(new User { Id = 1, Name = "sender" });
         _dbContext.SaveChanges();
 
-        var hub = new ChatHub(_dbContext, _connectedUsers)
+        var hub = new ChatHub(_dbContext, _connectedUsers, _metrics)
         {
             Clients = _mockClients.Object,
             Context = CreateMockContext("sender", "1", "conn-1").Object
@@ -194,7 +196,7 @@ public class ChatHubTests : IDisposable
         _dbContext.Users.Add(new User { Id = 1, Name = "sender" });
         _dbContext.SaveChanges();
 
-        var hub = new ChatHub(_dbContext, _connectedUsers)
+        var hub = new ChatHub(_dbContext, _connectedUsers, _metrics)
         {
             Clients = _mockClients.Object,
             Context = CreateMockContext("sender", "1", "conn-1").Object

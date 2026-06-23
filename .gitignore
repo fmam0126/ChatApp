@@ -368,3 +368,6 @@ FodyWeavers.xsd
 /ChatApp.server/appsettings.Development.json
 /skills
 /AGENTS.md
+
+# Environment
+.env

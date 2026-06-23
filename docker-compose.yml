@@ -1,0 +1,124 @@
+services:
+  # Traefik
+  traefik:
+    image: traefik:v3
+    command:
+      - "--configfile=/etc/traefik/traefik.yml"
+    ports:
+      - "80:80"           # HTTP entrypoint
+    volumes:
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - chatapp-network
+
+  # Blazor WebAssembly static files
+  chatapp-blazor:
+    build:
+      context: .
+      dockerfile: ChatApp.Blazor/Dockerfile
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.blazor.rule=Host(`localhost`)"
+      - "traefik.http.routers.blazor.priority=1"
+      - "traefik.http.services.blazor.loadbalancer.server.port=80"
+    networks:
+      - chatapp-network
+
+  # API server
+  chatapp-server:
+    build:
+      context: .
+      dockerfile: ChatApp.server/Dockerfile
+    environment:
+      - ASPNETCORE_URLS=${ASPNETCORE_URLS}
+      - DISABLE_HTTPS_REDIRECTION=${DISABLE_HTTPS_REDIRECTION}
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+    volumes:
+      - ./ChatApp.server/appsettings.json:/app/appsettings.json
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=Host(`localhost`) && (PathPrefix(`/auth`) || PathPrefix(`/ChatMessages`) || PathPrefix(`/chathub`) || PathPrefix(`/chatHub`) || PathPrefix(`/metrics`))"
+      - "traefik.http.routers.api.priority=10"
+      - "traefik.http.services.api.loadbalancer.server.port=8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - chatapp-network
+
+  # PostgreSQL
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - chatapp-network
+
+  # Pgadmin
+  pgadmin:
+    image: dpage/pgadmin4
+    ports:
+     - "5454:80"
+    environment:
+     - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL}
+     - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD}
+    volumes:
+     - pgadmin-data:/var/lib/pgadmin
+    depends_on:
+     - postgres
+    networks:
+      - chatapp-network
+  # Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    depends_on:
+      - chatapp-server
+    networks:
+      - chatapp-network
+
+  # Grafana
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+    volumes:
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - chatapp-network
+
+volumes:
+  postgres-data:
+  pgadmin-data:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  chatapp-network:
+    name: chatapp-network

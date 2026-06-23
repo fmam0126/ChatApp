@@ -6,6 +6,11 @@ public class ConnectedUsersService
 {
     private readonly ConcurrentDictionary<string, string> _activeUsers = new(); // username → connectionId
     private readonly ConcurrentDictionary<string, string> _connectionToUser = new(); // connectionId → username
+
+    /// <summary>
+    /// Current number of active (connected) users.
+    /// </summary>
+    public int ActiveCount => _activeUsers.Count;
     /// <summary>
     /// Tries to add a user to the active users list. Returns false if the username is already taken.
     /// </summary>

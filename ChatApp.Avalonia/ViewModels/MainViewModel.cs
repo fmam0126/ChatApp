@@ -147,7 +147,7 @@ namespace ChatApp.Avalonia.ViewModels
                 StatusText = "Connecting to chat server...";
 
                 _hubConnection = new HubConnectionBuilder()
-                    .WithUrl($"{ServerUrl}/chatHub", options =>
+                    .WithUrl($"{ServerUrl}/chathub", options =>
                     {
                         options.AccessTokenProvider = () => Task.FromResult(_accessToken)!;
                     })

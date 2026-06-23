@@ -11,11 +11,13 @@ namespace ChatApp.server.Hubs
     {
         private readonly ChatContext _context;
         private readonly ConnectedUsersService _connectedUsers;
+        private readonly ChatMetrics _metrics;
 
-        public ChatHub(ChatContext context, ConnectedUsersService connectedUsers)
+        public ChatHub(ChatContext context, ConnectedUsersService connectedUsers, ChatMetrics metrics)
         {
             _context = context;
             _connectedUsers = connectedUsers;
+            _metrics = metrics;
         }
         /// <summary>
         /// Handles new client connections to the chat hub. 
@@ -34,6 +36,8 @@ namespace ChatApp.server.Hubs
                 throw new HubException("Username already taken. Please choose another.");
             }
 
+            _metrics.Connections.Add(1);
+            _metrics.SystemMessages.Add(1);
             await Clients.All.SendAsync("ReceiveMessage", "System", $"{username} has joined the chat.");
             await base.OnConnectedAsync();
         }
@@ -49,6 +53,8 @@ namespace ChatApp.server.Hubs
             if (username != null)
             {
                 _connectedUsers.RemoveUser(Context.ConnectionId);
+                _metrics.Disconnections.Add(1);
+                _metrics.SystemMessages.Add(1);
                 await Clients.All.SendAsync("ReceiveMessage", "System", $"{username} has left the chat.");
             }
             await base.OnDisconnectedAsync(exception);
@@ -87,6 +93,7 @@ namespace ChatApp.server.Hubs
             await _context.SaveChangesAsync();
 
             await Clients.All.SendAsync("ReceiveMessage", username, message);
+            _metrics.MessagesSent.Add(1);
         }
     }
 }

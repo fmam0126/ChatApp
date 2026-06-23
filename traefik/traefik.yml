@@ -1,0 +1,18 @@
+# Traefik static configuration — dynamic routing configured via Docker labels on services
+
+entryPoints:
+  web:
+    address: ":80"
+
+providers:
+  docker:
+    exposedByDefault: false
+    network: chatapp-network
+
+# Dashboard for debugging (optional)
+api:
+  insecure: true
+  dashboard: true
+
+# Enable access logs for debugging
+accessLog: {}

@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
-using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -48,7 +47,7 @@ builder.Services.AddSignalR(options =>
 {
     options.AddFilter<JwtExpirationFilter>();
 });
-// Global rate limiting: 10 requests per minute per user (or IP if unauthenticated)
+// Global rate limiting: 10 requests per second per user (or IP if unauthenticated)
 builder.Services.AddRateLimiter((options) =>
 {
     options.RejectionStatusCode = 429;
@@ -80,9 +79,9 @@ builder.Services.AddRateLimiter(options =>
 });
 
 
-// SQLite Database context
+// PostgreSQL Database context
 builder.Services.AddDbContext<ChatContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // JWT Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -108,7 +107,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 var accessToken = context.Request.Query["access_token"];
                 var path = context.HttpContext.Request.Path;
                 if (!string.IsNullOrEmpty(accessToken) &&
-                    path.StartsWithSegments("/chatHub"))
+                    path.StartsWithSegments("/chatHub", StringComparison.OrdinalIgnoreCase))
                 {
                     context.Token = accessToken;
                 }
@@ -125,35 +124,22 @@ builder.Logging.AddOpenTelemetry(options =>
         .SetResourceBuilder(
             ResourceBuilder.CreateDefault()
                 .AddService(serviceName))
-        .AddConsoleExporter()
-        .AddOtlpExporter(exporterOptions =>
-        {
-            exporterOptions.Endpoint = new Uri("http://localhost:9090/api/v1/otlp/v1/metrics");
-            exporterOptions.Protocol = OtlpExportProtocol.HttpProtobuf;
-        });
+        .AddConsoleExporter();
 });
 builder.Services.AddOpenTelemetry()
       .ConfigureResource(resource => resource.AddService(serviceName))
       .WithTracing(tracing => tracing
           .AddAspNetCoreInstrumentation()
-          .AddConsoleExporter()
-          .AddOtlpExporter(exporterOptions =>
-          {
-              exporterOptions.Endpoint = new Uri("http://localhost:9090/api/v1/otlp/v1/metrics");
-              exporterOptions.Protocol = OtlpExportProtocol.HttpProtobuf;
-          }))
+          .AddConsoleExporter())
       .WithMetrics(metrics => metrics
           .AddAspNetCoreInstrumentation()
+          .AddMeter("ChatApp.SignalR")
           .AddConsoleExporter()
-          .AddOtlpExporter(exporterOptions =>
-          {
-              exporterOptions.Endpoint = new Uri("http://localhost:9090/api/v1/otlp/v1/metrics");
-              exporterOptions.Protocol = OtlpExportProtocol.HttpProtobuf;
-          }));
+          .AddPrometheusExporter());
 
 // Custom services
 
-
+builder.Services.AddSingleton<ChatMetrics>();
 builder.Services.AddSingleton(sp =>
     new TokenService(secretKey, issuer, audience, expires));
 builder.Services.AddSingleton<ConnectedUsersService>();
@@ -173,13 +159,17 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
     app.UseSwagger();
     app.UseSwaggerUI();
-    app.UseWebAssemblyDebugging();
 }
 
-app.UseBlazorFrameworkFiles();
-app.UseStaticFiles();
+if (!string.Equals(builder.Configuration["DISABLE_HTTPS_REDIRECTION"], "true", StringComparison.OrdinalIgnoreCase))
+{
+    app.UseHttpsRedirection();
+}
 
-app.UseHttpsRedirection();
+// Wire up active-connections observable gauge
+app.Services.GetRequiredService<ChatMetrics>()
+    .CreateActiveConnectionsGauge(() =>
+        app.Services.GetRequiredService<ConnectedUsersService>().ActiveCount);
 
 app.UseRateLimiter();
 app.UseAuthentication();
@@ -188,6 +178,6 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHub<ChatHub>("/chathub");
 
-app.MapFallbackToFile("index.html");
+app.MapPrometheusScrapingEndpoint();
 
 app.Run();

@@ -79,6 +79,7 @@ namespace ChatApp.CliClient
                 .WithUrl($"{settings.ServerUrl}/chatHub", options =>
                 {
                     options.AccessTokenProvider = () => Task.FromResult(accessToken)!;
+                    options.HttpMessageHandlerFactory = _ => DevSslBypass.CreateHandler();
                 })
                 .WithAutomaticReconnect()
                 .Build();

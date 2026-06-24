@@ -11,7 +11,7 @@ namespace ChatApp.Avalonia.Services
 
         public ChatClient(string serverUrl, string accessToken)
         {
-            _httpClient = new HttpClient
+            _httpClient = new HttpClient(DevSslBypass.CreateHandler())
             {
                 BaseAddress = new Uri(serverUrl)
             };

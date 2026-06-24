@@ -6,6 +6,7 @@ services:
       - "--configfile=/etc/traefik/traefik.yml"
     ports:
       - "80:80"           # HTTP entrypoint
+      - "443:443"         # HTTPS entrypoint
     volumes:
       - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro

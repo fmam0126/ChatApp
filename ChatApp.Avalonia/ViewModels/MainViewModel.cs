@@ -150,6 +150,7 @@ namespace ChatApp.Avalonia.ViewModels
                     .WithUrl($"{ServerUrl}/chathub", options =>
                     {
                         options.AccessTokenProvider = () => Task.FromResult(_accessToken)!;
+                        options.HttpMessageHandlerFactory = _ => DevSslBypass.CreateHandler();
                     })
                     .WithAutomaticReconnect()
                     .Build();

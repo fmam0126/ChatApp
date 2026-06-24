@@ -5,7 +5,7 @@ namespace ChatApp.CliClient.Classes;
 
 internal class AuthService
 {
-    private static readonly HttpClient _httpClient = new();
+    private static readonly HttpClient _httpClient = new(DevSslBypass.CreateHandler());
 
     public async Task<string?> LoginAsync(string serverUrl, string username)
     {

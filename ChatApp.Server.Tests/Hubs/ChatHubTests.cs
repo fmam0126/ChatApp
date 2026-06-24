@@ -1,3 +1,4 @@
+using System.Diagnostics.Metrics;
 using System.Security.Claims;
 using ChatApp.server.Class;
 using ChatApp.server.Hubs;
@@ -32,7 +33,11 @@ public class ChatHubTests : IDisposable
         _dbContext.Database.EnsureCreated();
 
         _connectedUsers = new ConnectedUsersService();
-        _metrics = new ChatMetrics();
+
+        var mockMeterFactory = new Mock<IMeterFactory>();
+        mockMeterFactory.Setup(m => m.Create(It.IsAny<MeterOptions>()))
+            .Returns(new Meter("ChatApp.SignalR", "1.0.0"));
+        _metrics = new ChatMetrics(mockMeterFactory.Object);
 
         _mockAll = new Mock<IClientProxy>();
         _mockAll.Setup(m => m.SendCoreAsync(

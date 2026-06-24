@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.RateLimiting;
 
 namespace ChatApp.server.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("[controller]")]
     public class ChatMessagesController : ControllerBase

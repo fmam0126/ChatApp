@@ -18,10 +18,5 @@ providers:
     exposedByDefault: false
     network: chatapp-network
 
-# Dashboard for debugging (optional)
-api:
-  insecure: true
-  dashboard: true
-
 # Enable access logs for debugging
 accessLog: {}

@@ -93,6 +93,9 @@ namespace ChatApp.Avalonia.ViewModels
         }
 
         // ── Configuration ──
+        /// <summary>
+        /// Loads the application configuration from appsettings.json.
+        /// </summary>
         private void LoadConfiguration()
         {
             try
@@ -115,6 +118,10 @@ namespace ChatApp.Avalonia.ViewModels
         }
 
         // ── Connect ──
+        /// <summary>
+        /// Connects to the chat server, authenticates the user, and sets up SignalR connection and event handlers.
+        /// </summary>
+        /// <returns>A task representing the asynchronous operation.</returns>
         private async Task ConnectAsync()
         {
             if (string.IsNullOrWhiteSpace(ServerUrl))
@@ -235,6 +242,10 @@ namespace ChatApp.Avalonia.ViewModels
         }
 
         // ── Disconnect ──
+        /// <summary>
+        /// Disconnects from the chat server, stops the SignalR connection, and clears the chat messages.
+        /// </summary>
+        /// <returns>A task representing the asynchronous operation.</returns>
         private async Task DisconnectAsync()
         {
             if (_hubConnection != null)
@@ -263,6 +274,10 @@ namespace ChatApp.Avalonia.ViewModels
         }
 
         // ── Send message ──
+        /// <summary>
+        /// Sends a message to the chat server.
+        /// </summary>
+        /// <returns>A task representing the asynchronous operation.</returns>
         private async Task SendMessageAsync()
         {
             var text = MessageText.Trim();

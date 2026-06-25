@@ -5,6 +5,9 @@ namespace ChatApp.CliClient.Classes;
 
 internal static class SpectreDisplay
 {
+    /// <summary>
+    /// Defines a set of colors to be used for different users in the chat application. Each user will be assigned a color based on their username, allowing for easy identification of messages from different users in the console display.
+    /// </summary>
     private static readonly Style[] UserColors =
     [
         new(Color.Aqua),
@@ -16,13 +19,20 @@ internal static class SpectreDisplay
         new(Color.HotPink),
         new(Color.Orange1),
     ];
-
-    private static Style GetUserColor(string username)
+    /// <summary>
+    /// Calculates a color for a given username by hashing the username and using the hash value to select a color from the predefined UserColors array. 
+    /// This ensures that each user is consistently assigned the same color based on their username, allowing for easy identification of messages in the console display.
+    /// </summary>
+    /// <param name="username">The username for which to calculate a color.</param>
+    /// <returns>The calculated color style.</returns>
+    public static Style GetUserColor(string username)
     {
         var hash = Math.Abs(username.GetHashCode());
         return UserColors[hash % UserColors.Length];
     }
-
+    /// <summary>
+    /// Displays a welcome message in the console using ASCII art and a rule line. 
+    /// </summary>
     public static void ShowWelcome()
     {
         AnsiConsole.Clear();
@@ -34,6 +44,13 @@ internal static class SpectreDisplay
         AnsiConsole.WriteLine();
     }
 
+    // unused
+    /// <summary>
+    /// Renders a chat message in the console with a timestamp, username, and message content.
+    /// If the username is "System", the message is displayed in grey italics. Otherwise, the message is displayed with the username in red and the message content in white, using a color assigned to the user based on their username.
+    /// </summary>
+    /// <param name="username">The username of the message sender.</param>
+    /// <param name="message">The message content.</param>
     public static void RenderMessage(string username, string message)
     {
         var now = DateTime.Now.ToString("HH:mm:ss");
@@ -44,11 +61,11 @@ internal static class SpectreDisplay
         }
         else
         {
-            
+
             var color = GetUserColor(username);
 
 
-            AnsiConsole.MarkupLine($"[grey][[{now}]][/] [red]{username}: [/][white]{Markup.Escape(message)}[/]");
+            AnsiConsole.MarkupLine($"[grey][[{now}]][/] [{color.ToMarkup()}]{Markup.Escape(username)}: [/][white]{Markup.Escape(message)}[/]");
             //var panel = new Panel(Markup.Escape(message))
             //{
             //    Header = new PanelHeader($"{username}  [{now}]"),
@@ -110,7 +127,7 @@ internal static class SpectreDisplay
     }
 
     public static void ShowError(string message)
-    { 
+    {
         AnsiConsole.MarkupLine($"\n[red][[!]] {Markup.Escape(message)}[/]");
     }
 

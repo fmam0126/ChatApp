@@ -17,12 +17,48 @@ using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Bind JWT settings from configuration
+// Reconfigure to make appsettings.json optional — all settings can be provided via
+// environment variables (e.g. JwtSettings__SecretKey, ConnectionStrings__DefaultConnection).
+builder.Configuration.Sources.Clear();
+builder.Configuration
+    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
+    .AddEnvironmentVariables();
+
+if (builder.Environment.IsDevelopment())
+{
+    builder.Configuration.AddUserSecrets(typeof(Program).Assembly, optional: true);
+}
+
+if (args.Length > 0)
+{
+    builder.Configuration.AddCommandLine(args);
+}
+
+// Bind JWT settings from configuration (may come from appsettings.json or environment variables)
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-var secretKey = jwtSettings["SecretKey"]!;
-var issuer = jwtSettings["Issuer"]!;
-var audience = jwtSettings["Audience"]!;
-var expires = int.Parse(jwtSettings["ExpirationMinutes"]!);
+var secretKey = jwtSettings["SecretKey"];
+var issuer = jwtSettings["Issuer"];
+var audience = jwtSettings["Audience"];
+var expirationMinutes = jwtSettings["ExpirationMinutes"];
+
+// Validate required configuration
+if (string.IsNullOrWhiteSpace(secretKey))
+    throw new InvalidOperationException(
+        "JWT SecretKey is required. Set JwtSettings__SecretKey environment variable or configure it in appsettings.json.");
+
+if (string.IsNullOrWhiteSpace(issuer))
+    throw new InvalidOperationException(
+        "JWT Issuer is required. Set JwtSettings__Issuer environment variable or configure it in appsettings.json.");
+
+if (string.IsNullOrWhiteSpace(audience))
+    throw new InvalidOperationException(
+        "JWT Audience is required. Set JwtSettings__Audience environment variable or configure it in appsettings.json.");
+
+if (!int.TryParse(expirationMinutes, out var expires))
+    throw new InvalidOperationException(
+        "JWT ExpirationMinutes is required and must be an integer. Set JwtSettings__ExpirationMinutes environment variable or configure it in appsettings.json.");
+
 var keyBytes = Encoding.UTF8.GetBytes(secretKey);
 
 // Add services to the container.

@@ -35,8 +35,10 @@ services:
       - ASPNETCORE_URLS=${ASPNETCORE_URLS}
       - DISABLE_HTTPS_REDIRECTION=${DISABLE_HTTPS_REDIRECTION}
       - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
-    volumes:
-      - ./ChatApp.server/appsettings.json:/app/appsettings.json
+      - JwtSettings__SecretKey=${JWT_SECRET_KEY}
+      - JwtSettings__Issuer=${JWT_ISSUER}
+      - JwtSettings__Audience=${JWT_AUDIENCE}
+      - JwtSettings__ExpirationMinutes=${JWT_EXPIRATION_MINUTES}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.api.rule=Host(`localhost`) && (PathPrefix(`/auth`) || PathPrefix(`/ChatMessages`) || PathPrefix(`/chathub`) || PathPrefix(`/chatHub`) || PathPrefix(`/metrics`))"

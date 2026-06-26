@@ -1,13 +1,11 @@
+# ── ChatApp.Server Docker ignore ──
+# This file documents exclusions for the ChatApp.Server Docker image.
+# When building from the repo root (docker-compose), the root .dockerignore applies.
+
 # ── IDE & editor ──
-**/.classpath
-**/.project
-**/.settings
-**/.toolstarget
 **/.vs
 **/.vscode
 **/*.*proj.user
-**/*.dbmdl
-**/*.jfm
 
 # ── Build output ──
 **/bin
@@ -23,46 +21,39 @@
 **/Dockerfile*
 **/.dockerignore
 
-# ── Node (if any) ──
-**/node_modules
-**/npm-debug.log
-
-# ── Environment ──
+# ── Environment & secrets ──
 **/.env
 **/.env.example
 **/secrets.dev.yaml
-**/values.dev.yaml
+**/appsettings.*.json
+!**/appsettings.json
+!**/appsettings.EXAMPLE.json
 
 # ── Documentation ──
 **/*.md
 LICENSE
 
-# ── Solution / VS files ──
-**/*.slnx
-**/*.slnLaunch.user
+# ── Solution files ──
+*.slnx
+*.slnLaunch.user
 
 # ── CI / CD ──
 **/.github
 
-# ── Infrastructure config (not needed for app builds) ──
+# ── Infrastructure config ──
 prometheus
 grafana
 traefik
 
-# ── Unrelated projects ──
+# ── Other projects in monorepo ──
 ChatApp.Avalonia
+ChatApp.Blazor
 ChatApp.CliClient
 ChatApp.Server.Tests
 
 # ── Static assets / misc ──
 windows98-icons
 skills
-azds.yaml
-charts
 
-# ── Allow-list: keep git refs so commit hashes are available at build time ──
+# ── Keep specific files ──
 !**/.gitignore
-!.git/HEAD
-!.git/config
-!.git/packed-refs
-!.git/refs/heads/**

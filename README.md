@@ -42,6 +42,7 @@ ChatApp/
 |   +-- Hubs/                  SignalR ChatHub
 |   +-- Models/                EF Core entities (User, ChatMessage, ChatContext)
 |   +-- DTO/                   Request/response DTOs
+|   +-- Migrations/            EF Core PostgreSQL migrations
 |   +-- Class/                 TokenService, ConnectedUsersService, ChatMetrics
 |   +-- Interfaces/            IChatContext abstraction
 |   +-- Program.cs             Application entry point and middleware pipeline
@@ -77,7 +78,7 @@ The server is an **ASP.NET Core 10** application providing a REST API and Signal
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | POST | `/auth/login` | None | Authenticate by username. Returns a JWT. |
-| GET | `/ChatMessages?count=N` | JWT | Retrieve the N most recent messages (1-200, default 50). |
+| GET | `/ChatMessages?count=N` | JWT | Retrieve the N most recent messages (1-200, currently pinned to 50). |
 | POST | `/ChatMessages` | JWT | Create a message via REST (unused in normal flow; messages go through SignalR). |
 
 ### SignalR Hub
@@ -96,10 +97,14 @@ The server tracks connected users in memory via `ConnectedUsersService` and broa
 
 ### Data Model
 
-- **User**: `Id` (int, PK), `Name` (string, required)
-- **ChatMessage**: `Id` (int, PK), `Content` (string), `Created` (DateTime), `SenderId` (int, FK to User)
+- **User**: `Id` (int, PK, auto-generated), `Name` (string, required)
+- **ChatMessage**: `Id` (int, PK, auto-generated), `Content` (string, required), `Created` (DateTime, UTC timestamp with time zone), `SenderId` (int, FK → User, cascade delete)
 
-EF Core with PostgreSQL. The database is created on startup via `EnsureCreated()` (no formal migrations).
+EF Core with PostgreSQL via Npgsql. The database schema is managed through EF Core migrations:
+
+- **Migrations folder**: `ChatApp.server/Migrations/`
+- **Initial migration**: Creates `Users` and `ChatMessages` tables with the FK relationship and an index on `SenderId`
+- To apply migrations: `dotnet ef database update` (run from the `ChatApp.server` directory)
 
 ### Rate Limiting
 
@@ -183,6 +188,10 @@ Configuration is managed through `.env` (local, not committed to a public repo) 
 | `PGADMIN_DEFAULT_PASSWORD` | pgAdmin login password |
 | `DISABLE_HTTPS_REDIRECTION` | Set to `true` when behind Traefik |
 | `ASPNETCORE_URLS` | Server listen address |
+| `JWT_SECRET_KEY` | HMAC-SHA256 signing key for JWT tokens |
+| `JWT_ISSUER` | JWT issuer claim |
+| `JWT_AUDIENCE` | JWT audience claim |
+| `JWT_EXPIRATION_MINUTES` | JWT token lifetime in minutes |
 | `GRAFANA_ADMIN_USER` | Grafana admin username |
 | `GRAFANA_ADMIN_PASSWORD` | Grafana admin password |
 
@@ -203,6 +212,9 @@ cp .env.example .env
 
 # Start all services
 docker compose up -d
+
+# Apply EF Core migrations (after the database is healthy)
+dotnet ef database update --project ChatApp.server
 ```
 
 This starts the full stack: Traefik, server, Blazor client, PostgreSQL, pgAdmin, Prometheus, and Grafana.
@@ -210,8 +222,11 @@ This starts the full stack: Traefik, server, Blazor client, PostgreSQL, pgAdmin,
 ### Running Locally (Development)
 
 ```bash
-# Start the server
+# Apply EF Core migrations
 cd ChatApp.server
+dotnet ef database update
+
+# Start the server
 dotnet run
 
 # In another terminal, start the Blazor client
@@ -250,11 +265,11 @@ Integration tests use `WebApplicationFactory<T>` with **SQLite in-memory** repla
 
 ## Configuration
 
-Server configuration is in `ChatApp.server/appsettings.json`:
+Server configuration is in `ChatApp.server/appsettings.json`. All settings can optionally be provided via environment variables (see `.env.example`).
 
-- **JwtSettings**: Secret key, issuer, audience, expiration (60 minutes).
-- **ConnectionStrings.DefaultConnection**: PostgreSQL connection string.
-- **Rate Limiting**: Global fixed window (10 req/s) and LoginPolicy (4 req/min).
+- **JwtSettings**: Secret key, issuer, audience, expiration (60 minutes). Set via `JWT_SECRET_KEY`, `JWT_ISSUER`, `JWT_AUDIENCE`, and `JWT_EXPIRATION_MINUTES`.
+- **ConnectionStrings.DefaultConnection**: PostgreSQL connection string. Set via `ConnectionStrings__DefaultConnection` or `POSTGRES_USER`/`POSTGRES_PASSWORD`.
+- **Rate Limiting**: Global fixed window (10 req/s) and LoginPolicy (4 req/min). Configured in code.
 
 Client configuration is in each client's `appsettings.json`, specifying the server URL (defaults to `https://localhost`).
 

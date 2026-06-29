@@ -57,6 +57,14 @@
                                  FontSize="13" />
                     </StackPanel>
 
+                    <StackPanel Spacing="2">
+                        <TextBlock Text="Password:" FontSize="12" />
+                        <TextBox Text="{Binding Password}"
+                                 Watermark="Enter password (8+ characters)"
+                                 FontSize="13"
+                                 PasswordChar="*" />
+                    </StackPanel>
+
                     <Button Content="Connect"
                             Command="{Binding ConnectCommand}"
                             HorizontalAlignment="Left"

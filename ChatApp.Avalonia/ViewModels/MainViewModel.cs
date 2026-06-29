@@ -30,6 +30,13 @@ namespace ChatApp.Avalonia.ViewModels
             set => SetProperty(ref _username, value);
         }
 
+        private string _password = "";
+        public string Password
+        {
+            get => _password;
+            set => SetProperty(ref _password, value);
+        }
+
         private bool _isConnected;
         public bool IsConnected
         {
@@ -137,19 +144,27 @@ namespace ChatApp.Avalonia.ViewModels
                 return;
             }
 
+            if (string.IsNullOrWhiteSpace(Password) || Password.Length < 8)
+            {
+                StatusText = "Password must be at least 8 characters.";
+                return;
+            }
+
             IsConnecting = true;
             StatusText = "Authenticating...";
 
             try
             {
-                _accessToken = await _authService.LoginAsync(ServerUrl, username);
+                var authResult = await _authService.LoginAsync(ServerUrl, username, Password);
 
-                if (_accessToken == null)
+                if (!authResult.IsSuccess)
                 {
-                    StatusText = $"Username '{username}' is already taken. Choose another.";
+                    StatusText = authResult.ErrorMessage ?? "Authentication failed.";
                     IsConnecting = false;
                     return;
                 }
+
+                _accessToken = authResult.Token;
 
                 StatusText = "Connecting to chat server...";
 
@@ -225,7 +240,7 @@ namespace ChatApp.Avalonia.ViewModels
                 await _hubConnection.StartAsync();
 
                 IsConnected = true;
-                StatusText = $"Connected as {username}";
+                StatusText = $"Connected as {authResult.Username}";
                 MessageText = "";
                 (ConnectCommand as RelayCommand)?.RaiseCanExecuteChanged();
                 (DisconnectCommand as RelayCommand)?.RaiseCanExecuteChanged();

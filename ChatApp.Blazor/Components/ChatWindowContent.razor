@@ -22,7 +22,17 @@
                            Appearance="Appearance.Win98"
                            @onkeydown="@EnterLogin" />
         </div>
+        <div class="login-input-row">
 
+            <label class="login-label">Password:</label>
+            <WinOldTextBox @bind-Value="_password"
+                           Placeholder="Enter Password (at least 8 chars)"
+                           InputStyle="width: 200px"
+                           Appearance="Appearance.Win98"
+                           type="password"
+                           @onkeydown="@EnterLogin"/>
+        </div>
+        
         @if (!string.IsNullOrEmpty(_errorMessage))
         {
             <p class="error-text">@_errorMessage</p>
@@ -79,7 +89,10 @@ else if (_view == "chat")
         [JsonPropertyName("senderId")] public int SenderId { get; set; }
         [JsonPropertyName("senderName")] public string SenderName { get; set; } = string.Empty;
     }
-
+    private class AuthErrorResponse
+    {
+        [JsonPropertyName("message")] public string Message { get; set; } = string.Empty;
+    }
     private class AuthResponse
     {
         [JsonPropertyName("token")] public string Token { get; set; } = string.Empty;
@@ -112,6 +125,7 @@ else if (_view == "chat")
     // ── View state ──
     private string _view = "login";
     private string _username = string.Empty;
+    private string _password = string.Empty;
     private string _errorMessage = string.Empty;
     private bool _isLoggingIn;
 
@@ -153,17 +167,21 @@ else if (_view == "chat")
             _errorMessage = "Username must be between 3 and 30 characters.";
             return;
         }
-
+        if (_password.Length < 8 || string.IsNullOrWhiteSpace(_password))
+        {
+            _errorMessage = "Password must be at least 8 characters";
+        }
         _isLoggingIn = true;
         _statusText = "Authenticating...";
 
         try
         {
-            var response = await Http.PostAsJsonAsync("/auth/login", new { username = trimmed });
+            var response = await Http.PostAsJsonAsync("/auth/login", new { username = trimmed, password = _password});
 
             if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
             {
-                _errorMessage = $"Username '{trimmed}' is already taken. Choose another.";
+                var errorResponse = await response.Content.ReadFromJsonAsync<AuthErrorResponse>();
+                _errorMessage = $"{errorResponse?.Message}";
                 _statusText = "Login failed";
                 return;
             }

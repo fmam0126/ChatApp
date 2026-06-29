@@ -32,6 +32,7 @@ services:
       context: .
       dockerfile: ChatApp.server/Dockerfile
     environment:
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT}
       - ASPNETCORE_URLS=${ASPNETCORE_URLS}
       - DISABLE_HTTPS_REDIRECTION=${DISABLE_HTTPS_REDIRECTION}
       - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
@@ -41,7 +42,7 @@ services:
       - JwtSettings__ExpirationMinutes=${JWT_EXPIRATION_MINUTES}
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.api.rule=Host(`localhost`) && (PathPrefix(`/auth`) || PathPrefix(`/ChatMessages`) || PathPrefix(`/chathub`) || PathPrefix(`/chatHub`) || PathPrefix(`/metrics`))"
+      - "traefik.http.routers.api.rule=Host(`localhost`) && (PathPrefix(`/auth`) || PathPrefix(`/ChatMessages`) || PathPrefix(`/chathub`) || PathPrefix(`/chatHub`) || PathPrefix(`/metrics`) || PathPrefix(`/swagger`))"
       - "traefik.http.routers.api.priority=10"
       - "traefik.http.services.api.loadbalancer.server.port=8080"
     depends_on:

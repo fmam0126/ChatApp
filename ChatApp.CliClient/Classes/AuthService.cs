@@ -6,38 +6,66 @@ namespace ChatApp.CliClient.Classes;
 internal class AuthService
 {
     private static readonly HttpClient _httpClient = new(DevSslBypass.CreateHandler());
+
     /// <summary>
-    /// Attempts to log in a user by sending their username to the specified server URL. 
-    /// If the username is already taken, it returns null; otherwise, it returns the authentication token received from the server.
+    /// Attempts to log in a user by sending their username and password to the specified server URL.
+    /// Returns the authentication token on success, or an error message on failure.
     /// </summary>
     /// <param name="serverUrl">The URL of the server to which to send the login request.</param>
     /// <param name="username">The username of the user attempting to log in.</param>
-    /// <returns>The authentication token if login is successful; otherwise, null.</returns>
-    public async Task<string?> LoginAsync(string serverUrl, string username)
+    /// <param name="password">The password of the user attempting to log in.</param>
+    /// <returns>A tuple containing the authentication token (null on failure) and an error message (null on success).</returns>
+    public async Task<(string? Token, string? ErrorMessage)> LoginAsync(
+        string serverUrl, string username, string password)
     {
-        var response = await _httpClient.PostAsJsonAsync($"{serverUrl}/auth/login", new { username });
+        var response = await _httpClient.PostAsJsonAsync(
+            $"{serverUrl}/auth/login", new { username, password });
+
+        if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+        {
+            var error = await response.Content.ReadFromJsonAsync<AuthErrorResponse>();
+            return (null, error?.Message ?? "Invalid request.");
+        }
 
         if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
         {
-            return null; // Username taken
+            var error = await response.Content.ReadFromJsonAsync<AuthErrorResponse>();
+            return (null, error?.Message ?? "Login failed.");
         }
 
         response.EnsureSuccessStatusCode();
 
         var result = await response.Content.ReadFromJsonAsync<LoginResponse>();
-        //Console.WriteLine(result.Token);
-        return result?.Token;
+        if (result?.Token is null)
+        {
+            return (null, "Invalid response from server.");
+        }
+
+        return (result.Token, null);
     }
+
     /// <summary>
-    /// Represents the response received from the server upon a successful login attempt, containing the authentication token.
+    /// Represents the response received from the server upon a successful login attempt,
+    /// containing the authentication token, username, and user ID.
     /// </summary>
     private class LoginResponse
     {
-        /// <summary>
-        /// Gets or sets the authentication token received from the server upon a successful login attempt. 
-        /// This token is used for subsequent authenticated requests to the server.
-        /// </summary>
         [JsonPropertyName("token")]
         public string Token { get; set; } = string.Empty;
+
+        [JsonPropertyName("username")]
+        public string? Username { get; set; }
+
+        [JsonPropertyName("userId")]
+        public int UserId { get; set; }
+    }
+
+    /// <summary>
+    /// Represents an error response from the server.
+    /// </summary>
+    private class AuthErrorResponse
+    {
+        [JsonPropertyName("message")]
+        public string Message { get; set; } = string.Empty;
     }
 }

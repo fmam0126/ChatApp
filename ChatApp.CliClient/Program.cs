@@ -46,7 +46,7 @@ namespace ChatApp.CliClient
             // ── Welcome ──
             SpectreDisplay.ShowWelcome();
 
-            // ── Authenticate (loop until unique username) ──
+            // ── Authenticate (loop until successful login) ──
             var authService = new AuthService();
             string? accessToken = null;
             string username;
@@ -61,9 +61,20 @@ namespace ChatApp.CliClient
                     continue;
                 }
 
+                var password = SpectreDisplay.PromptSecret("Enter your password:");
+
+                if (password.Length < 8)
+                {
+                    SpectreDisplay.ShowError("Password must be at least 8 characters.");
+                    continue;
+                }
+
+                string? errorMessage = null;
+
                 await SpectreDisplay.ShowSpinner("Authenticating...", async () =>
                 {
-                    accessToken = await authService.LoginAsync(settings.ServerUrl, username);
+                    (accessToken, errorMessage) = await authService.LoginAsync(
+                        settings.ServerUrl, username, password);
                 });
 
                 if (accessToken != null)
@@ -72,7 +83,7 @@ namespace ChatApp.CliClient
                     break;
                 }
 
-                SpectreDisplay.ShowError($"Username '{username}' is already taken. Please choose another.");
+                SpectreDisplay.ShowError(errorMessage ?? "Login failed.");
             }
             // ── Connect to SignalR hub ──
             var connection = new HubConnectionBuilder()

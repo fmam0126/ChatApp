@@ -118,6 +118,14 @@ internal static class SpectreDisplay
             new TextPrompt<string>($"[bold]{text}[/]")
                 .PromptStyle("cyan"));
     }
+
+    public static string PromptSecret(string text)
+    {
+        return AnsiConsole.Prompt(
+            new TextPrompt<string>($"[bold]{text}[/]")
+                .PromptStyle("cyan")
+                .Secret());
+    }
     public static string PromptForMessage(string text, string defaultValue = "")
     {
         return AnsiConsole.Prompt(

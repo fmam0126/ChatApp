@@ -23,7 +23,7 @@ namespace ChatApp.Server.Tests.Controllers
             // arrange
             var factory = new NormalRateLimitWebApplicationFactory();
             var client = factory.CreateClient();
-            var request = new LoginRequestDTO { Username = "testUser" };
+            var request = new LoginRequestDTO { Username = "testUser", Password = "password123" };
             HttpResponseMessage response;
             // act
             for (int i = 0; i < 3; i++)
@@ -40,7 +40,7 @@ namespace ChatApp.Server.Tests.Controllers
             // Arranage
             var factory = new NormalRateLimitWebApplicationFactory();
             var client = factory.CreateClient();
-            var request = new LoginRequestDTO { Username = "testUser" };
+            var request = new LoginRequestDTO { Username = "testUser", Password = "password123" };
             HttpResponseMessage response;
             // Act 
             for (int i = 0; i < 4; i++)
@@ -63,7 +63,7 @@ namespace ChatApp.Server.Tests.Controllers
             var fakeTime = new FakeTimeProvider();
             var factory = new NormalRateLimitWebApplicationFactory();
             var client = factory.CreateClient();
-            var request = new LoginRequestDTO { Username = "testUser" };
+            var request = new LoginRequestDTO { Username = "testUser", Password = "password123" };
             HttpResponseMessage response;
 
             // Act

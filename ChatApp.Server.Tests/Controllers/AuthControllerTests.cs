@@ -21,7 +21,7 @@ public class AuthControllerTests : IClassFixture<HighRateLimitWebApplicationFact
     {
         // Arrange
         var client = _factory.CreateClient();
-        var request = new LoginRequestDTO { Username = "testuser" };
+        var request = new LoginRequestDTO { Username = "testuser", Password = "password123" };
         
         // Act
         var response = await client.PostAsJsonAsync("/auth/login", request);
@@ -43,7 +43,7 @@ public class AuthControllerTests : IClassFixture<HighRateLimitWebApplicationFact
     {
         // Arrange
         var client = _factory.CreateClient();
-        var request = new LoginRequestDTO { Username = "ab" }; // less than 3 chars
+        var request = new LoginRequestDTO { Username = "ab", Password = "password123" }; // less than 3 chars
         
         // Act
         
@@ -60,7 +60,7 @@ public class AuthControllerTests : IClassFixture<HighRateLimitWebApplicationFact
         // Arrange
         
         var client = _factory.CreateClient();
-        var request = new LoginRequestDTO { Username = new string('x', 31) }; // more than 30 chars
+        var request = new LoginRequestDTO { Username = new string('x', 31), Password = "password123" }; // more than 30 chars
 
         // Act
 
@@ -77,7 +77,7 @@ public class AuthControllerTests : IClassFixture<HighRateLimitWebApplicationFact
         // Arrange
         
         var client = _factory.CreateClient();
-        var request = new LoginRequestDTO { Username = "   " };
+        var request = new LoginRequestDTO { Username = "   ", Password = "password123" };
         
         // Act
         
@@ -93,7 +93,7 @@ public class AuthControllerTests : IClassFixture<HighRateLimitWebApplicationFact
     {
         // Arrange
         var client = _factory.CreateClient();
-        var request = new LoginRequestDTO { Username = "  validuser  " };
+        var request = new LoginRequestDTO { Username = "  validuser  ", Password = "password123" };
         
         // Act
 
@@ -117,7 +117,7 @@ public class AuthControllerTests : IClassFixture<HighRateLimitWebApplicationFact
 
         // Act
         // First login creates the user
-        var responseUserCreation = await client.PostAsJsonAsync("/auth/login", new LoginRequestDTO { Username = "returning" });
+        var responseUserCreation = await client.PostAsJsonAsync("/auth/login", new LoginRequestDTO { Username = "returning", Password = "password123" });
 
         Assert.Equal(HttpStatusCode.OK, responseUserCreation.StatusCode);
         var bodyCreation = await responseUserCreation.Content.ReadFromJsonAsync<LoginResponseDTO>(
@@ -125,7 +125,7 @@ public class AuthControllerTests : IClassFixture<HighRateLimitWebApplicationFact
 
 
         // Second login should find existing user and return same UserId
-        var responseUserLogin = await client.PostAsJsonAsync("/auth/login", new LoginRequestDTO { Username = "returning" });
+        var responseUserLogin = await client.PostAsJsonAsync("/auth/login", new LoginRequestDTO { Username = "returning", Password = "password123" });
 
         Assert.Equal(HttpStatusCode.OK, responseUserLogin.StatusCode);
 
@@ -148,7 +148,7 @@ public class AuthControllerTests : IClassFixture<HighRateLimitWebApplicationFact
         connectedUsers.TryAddUser("takenuser", "fake-connection-id");
         // Act
         var client = _factory.CreateClient();
-        var request = new LoginRequestDTO { Username = "takenuser" };
+        var request = new LoginRequestDTO { Username = "takenuser", Password = "password123" };
 
         var response = await client.PostAsJsonAsync("/auth/login", request);
         // Assert

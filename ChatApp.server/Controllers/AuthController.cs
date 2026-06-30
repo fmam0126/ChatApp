@@ -39,9 +39,9 @@ namespace ChatApp.server.Controllers
             {
                 return BadRequest(new { message = "Username must be between 3 and 30 characters." });
             }
-            if (string.IsNullOrWhiteSpace(password) || password.Length < 8 )
+            if (string.IsNullOrWhiteSpace(password) || password.Length < 8)
             {
-                return BadRequest(new { message = "Password must be at least 8 characters"});
+                return BadRequest(new { message = "Password must be at least 8 characters" });
             }
 
             // Check if username is already taken by an active connection
@@ -54,17 +54,11 @@ namespace ChatApp.server.Controllers
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Name == username);
             if (user is null)
             {
-                user = new User
-                { 
-                    Name = username,
-                    PasswordHash = BCrypt.Net.BCrypt.EnhancedHashPassword(password, 11)
-                };
-                _context.Users.Add(user);
-                await _context.SaveChangesAsync();
+                return Conflict(new { message = "Username or password is incorrect" });
             }
 
             // verify password 
-            if (BCrypt.Net.BCrypt.EnhancedVerify(password, user.PasswordHash)){
+            if (BCrypt.Net.BCrypt.EnhancedVerify(password, user.PasswordHash)) {
                 var token = _tokenService.GenerateToken(user);
 
                 return Ok(new LoginResponseDTO
@@ -76,6 +70,43 @@ namespace ChatApp.server.Controllers
             }
             return Conflict(new { message = "Username or password is incorrect" });
 
+        }
+        [HttpPost("register")]
+        public async Task<IActionResult> Register([FromBody] LoginRequestDTO request)
+        {
+            var username = request.Username?.Trim();
+            var password = request.Password;
+
+            if (string.IsNullOrWhiteSpace(username) || username.Length < 3 || username.Length > 30)
+            {
+                return BadRequest(new { message = "Username must be between 3 and 30 characters." });
+            }
+            if (string.IsNullOrWhiteSpace(password) || password.Length < 8)
+            {
+                return BadRequest(new { message = "Password must be at least 8 characters" });
+            }
+            
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Name == username);
+            if (user != null)
+            {
+                return Conflict(new { message = "Username already taken. Please choose another." });
+            }
+
+            user = new User
+            {
+                Name = username,
+                PasswordHash = BCrypt.Net.BCrypt.EnhancedHashPassword(password, 12)
+            };
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+            var token = _tokenService.GenerateToken(user);
+
+            return Ok(new LoginResponseDTO
+            {
+                Token = token,
+                Username = user.Name,
+                UserId = user.Id
+            });
         }
     }
 }

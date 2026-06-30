@@ -69,6 +69,26 @@ namespace ChatApp.Avalonia.ViewModels
             set => SetProperty(ref _isConnecting, value);
         }
 
+        private bool _isRegisterMode;
+        public bool IsRegisterMode
+        {
+            get => _isRegisterMode;
+            set
+            {
+                if (SetProperty(ref _isRegisterMode, value))
+                {
+                    OnPropertyChanged(nameof(IsLoginMode));
+                    OnPropertyChanged(nameof(ActionButtonLabel));
+                    OnPropertyChanged(nameof(ToggleButtonLabel));
+                    StatusText = value ? "Enter details to register" : "Enter details to log in";
+                }
+            }
+        }
+
+        public bool IsLoginMode => !IsRegisterMode;
+        public string ActionButtonLabel => IsRegisterMode ? "Register" : "Connect";
+        public string ToggleButtonLabel => IsRegisterMode ? "Back to Login" : "Register";
+
         // ── Chat properties ──
         private string _messageText = "";
         public string MessageText
@@ -89,12 +109,14 @@ namespace ChatApp.Avalonia.ViewModels
         public ICommand ConnectCommand { get; }
         public ICommand DisconnectCommand { get; }
         public ICommand SendMessageCommand { get; }
+        public ICommand ToggleRegisterModeCommand { get; }
 
         public MainViewModel()
         {
             ConnectCommand = new RelayCommand(async () => await ConnectAsync(), () => !IsConnecting && !IsConnected);
             DisconnectCommand = new RelayCommand(async () => await DisconnectAsync(), () => IsConnected);
             SendMessageCommand = new RelayCommand(async () => await SendMessageAsync(), () => IsConnected && !string.IsNullOrWhiteSpace(MessageText));
+            ToggleRegisterModeCommand = new RelayCommand(() => { IsRegisterMode = !IsRegisterMode; return Task.CompletedTask; }, () => !IsConnecting);
 
             LoadConfiguration();
         }
@@ -155,7 +177,9 @@ namespace ChatApp.Avalonia.ViewModels
 
             try
             {
-                var authResult = await _authService.LoginAsync(ServerUrl, username, Password);
+                var authResult = IsRegisterMode
+                    ? await _authService.RegisterAsync(ServerUrl, username, Password)
+                    : await _authService.LoginAsync(ServerUrl, username, Password);
 
                 if (!authResult.IsSuccess)
                 {

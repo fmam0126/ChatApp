@@ -44,8 +44,72 @@
                           Appearance="Appearance.Win98">
                 @(_isLoggingIn ? "Connecting..." : "Connect")
             </WinOldButton>
+            <WinOldButton OnClick="ShowRegister"
+                          Disabled="@(_isLoggingIn)"
+                          Appearance="Appearance.Win98"
+                          Style="margin-left: 8px;">
+                Register
+            </WinOldButton>
         </div>
     </div>
+}
+@* ── REGISTER STATE ── *@
+else if (_view == "register")
+{
+    if (_registerSuccess)
+    {
+        <div class="login-content">
+            <p class="login-text" style="color: green; font-weight: bold;">Registration successful!</p>
+            <div class="button-row">
+                <WinOldButton OnClick="OpenChatAfterRegister"
+                              Appearance="Appearance.Win98">
+                    Open Chat
+                </WinOldButton>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="login-content">
+            <p class="login-text">Create a new account.</p>
+            <div class="login-input-row">
+                <label class="login-label">Username:</label>
+                <WinOldTextBox @bind-Value="_registerUsername"
+                               Placeholder="Choose a username (3-30 chars)"
+                               InputStyle="width: 200px;"
+                               Appearance="Appearance.Win98"
+                               @onkeydown="@EnterRegister" />
+            </div>
+            <div class="login-input-row">
+                <label class="login-label">Password:</label>
+                <WinOldTextBox @bind-Value="_registerPassword"
+                               Placeholder="Choose a password (at least 8 chars)"
+                               InputStyle="width: 200px;"
+                               Appearance="Appearance.Win98"
+                               type="password"
+                               @onkeydown="@EnterRegister" />
+            </div>
+
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <p class="error-text">@_errorMessage</p>
+            }
+
+            <div class="button-row">
+                <WinOldButton OnClick="Register"
+                              Disabled="@(_isLoggingIn || string.IsNullOrWhiteSpace(_registerUsername))"
+                              Appearance="Appearance.Win98">
+                    @(_isLoggingIn ? "Registering..." : "Register")
+                </WinOldButton>
+                <WinOldButton OnClick="ShowLogin"
+                              Disabled="@(_isLoggingIn)"
+                              Appearance="Appearance.Win98"
+                              Style="margin-left: 8px;">
+                    Back to Login
+                </WinOldButton>
+            </div>
+        </div>
+    }
 }
 @* ── CHAT STATE ── *@
 else if (_view == "chat")
@@ -126,8 +190,11 @@ else if (_view == "chat")
     private string _view = "login";
     private string _username = string.Empty;
     private string _password = string.Empty;
+    private string _registerUsername = string.Empty;
+    private string _registerPassword = string.Empty;
     private string _errorMessage = string.Empty;
     private bool _isLoggingIn;
+    private bool _registerSuccess;
 
     // ── Chat state ──
     private HubConnection? _hubConnection;
@@ -208,6 +275,86 @@ else if (_view == "chat")
         {
             _isLoggingIn = false;
         }
+    }
+
+    // ═══ REGISTER ═══
+    private void ShowRegister()
+    {
+        _view = "register";
+        _errorMessage = string.Empty;
+        _registerSuccess = false;
+    }
+
+    private void ShowLogin()
+    {
+        _view = "login";
+        _errorMessage = string.Empty;
+    }
+
+    private async Task EnterRegister(KeyboardEventArgs e)
+    {
+        if (e.Code == "Enter" || e.Code == "NumpadEnter")
+            await Register();
+    }
+
+    private async Task Register()
+    {
+        _errorMessage = string.Empty;
+        var trimmed = _registerUsername.Trim();
+        if (trimmed.Length < 3 || trimmed.Length > 30)
+        {
+            _errorMessage = "Username must be between 3 and 30 characters.";
+            return;
+        }
+        if (_registerPassword.Length < 8 || string.IsNullOrWhiteSpace(_registerPassword))
+        {
+            _errorMessage = "Password must be at least 8 characters.";
+            return;
+        }
+        _isLoggingIn = true;
+        _statusText = "Registering...";
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync("/auth/register",
+                new { username = trimmed, password = _registerPassword });
+
+            if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+            {
+                var errorResponse = await response.Content.ReadFromJsonAsync<AuthErrorResponse>();
+                _errorMessage = errorResponse?.Message ?? "Username already taken.";
+                _statusText = "Registration failed";
+                return;
+            }
+
+            response.EnsureSuccessStatusCode();
+            var result = await response.Content.ReadFromJsonAsync<AuthResponse>();
+            if (result != null)
+            {
+                _token = result.Token;
+                _authUsername = result.Username;
+                _registerSuccess = true;
+                _statusText = "Registration successful";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Registration failed: {ex.Message}";
+            _statusText = "Error";
+        }
+        finally
+        {
+            _isLoggingIn = false;
+        }
+    }
+
+    private async Task OpenChatAfterRegister()
+    {
+        Manager.UpdateWindowTitle(Window.Id, $"ChatApp - {_authUsername}");
+        _view = "chat";
+        _statusText = "Connecting...";
+        StateHasChanged();
+        await ConnectToHub();
     }
 
     // ═══ CHAT ═══

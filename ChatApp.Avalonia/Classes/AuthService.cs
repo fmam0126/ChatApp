@@ -44,6 +44,38 @@ public class AuthService
     }
 
     /// <summary>
+    /// Attempts to register a new user by sending their username and password to the specified server URL.
+    /// Returns an <see cref="AuthResult"/> indicating success (with token, username, and user ID)
+    /// or failure (with an error message from the server).
+    /// </summary>
+    /// <param name="serverUrl">The URL of the server to which to send the registration request.</param>
+    /// <param name="username">The desired username for the new account.</param>
+    /// <param name="password">The desired password for the new account.</param>
+    /// <returns>An <see cref="AuthResult"/> containing the authentication token and user details on success,
+    /// or an error message on failure.</returns>
+    public async Task<AuthResult> RegisterAsync(string serverUrl, string username, string password)
+    {
+        var response = await _httpClient.PostAsJsonAsync($"{serverUrl}/auth/register", new { username, password });
+
+        if (response.StatusCode == System.Net.HttpStatusCode.Conflict ||
+            response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+        {
+            var error = await response.Content.ReadFromJsonAsync<AuthErrorResponse>();
+            return AuthResult.Failure(error?.Message ?? "Registration failed.");
+        }
+
+        response.EnsureSuccessStatusCode();
+
+        var result = await response.Content.ReadFromJsonAsync<LoginResponse>();
+        if (result?.Token is null)
+        {
+            return AuthResult.Failure("Invalid response from server.");
+        }
+
+        return AuthResult.Success(result.Token, result.Username ?? username, result.UserId);
+    }
+
+    /// <summary>
     /// Represents the response received from the server upon a successful login attempt,
     /// containing the authentication token, username, and user ID.
     /// </summary>

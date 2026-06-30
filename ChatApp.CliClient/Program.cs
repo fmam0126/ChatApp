@@ -46,7 +46,16 @@ namespace ChatApp.CliClient
             // ── Welcome ──
             SpectreDisplay.ShowWelcome();
 
-            // ── Authenticate (loop until successful login) ──
+            // ── Choose login or register ──
+            string mode;
+            while (true)
+            {
+                mode = SpectreDisplay.Prompt("(L)ogin or (R)egister?").Trim().ToUpperInvariant();
+                if (mode is "L" or "R") break;
+                SpectreDisplay.ShowError("Please enter 'L' for login or 'R' for register.");
+            }
+
+            // ── Authenticate (loop until successful) ──
             var authService = new AuthService();
             string? accessToken = null;
             string username;
@@ -73,8 +82,12 @@ namespace ChatApp.CliClient
 
                 await SpectreDisplay.ShowSpinner("Authenticating...", async () =>
                 {
-                    (accessToken, errorMessage) = await authService.LoginAsync(
-                        settings.ServerUrl, username, password);
+                    if (mode == "L")
+                        (accessToken, errorMessage) = await authService.LoginAsync(
+                            settings.ServerUrl, username, password);
+                    else
+                        (accessToken, errorMessage) = await authService.RegisterAsync(
+                            settings.ServerUrl, username, password);
                 });
 
                 if (accessToken != null)

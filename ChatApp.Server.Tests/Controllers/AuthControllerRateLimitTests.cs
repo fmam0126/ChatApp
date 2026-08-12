@@ -25,30 +25,39 @@ namespace ChatApp.Server.Tests.Controllers
             var client = factory.CreateClient();
             var request = new LoginRequestDTO { Username = "testUser", Password = "password123" };
             HttpResponseMessage response;
-            // act
+
+            // Register the user first (consumes 1 rate limit permit)
+            await client.PostAsJsonAsync("/auth/register", request);
+
+            // act - 3 logins + 1 register = 4 permits (at the limit)
             for (int i = 0; i < 3; i++)
             {
                 response = await client.PostAsJsonAsync("/auth/login", request);
                 Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             }
-            
-            
+
+
         }
         [Fact]
         public async Task Login_OverRateLimit_ReturnsTooManyRequests()
         {
-            // Arranage
+            // Arrange
             var factory = new NormalRateLimitWebApplicationFactory();
             var client = factory.CreateClient();
             var request = new LoginRequestDTO { Username = "testUser", Password = "password123" };
             HttpResponseMessage response;
-            // Act 
-            for (int i = 0; i < 4; i++)
+
+            // Register the user first (consumes 1 rate limit permit)
+            await client.PostAsJsonAsync("/auth/register", request);
+
+            // Act - 3 logins + 1 register = 4 permits (at the limit)
+            for (int i = 0; i < 3; i++)
             {
             response = await client.PostAsJsonAsync("/auth/login", request);
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-                
+
             }
+            // 5th call exceeds the limit
             response = await client.PostAsJsonAsync("/auth/login", request);
 
             // Assert
@@ -66,13 +75,17 @@ namespace ChatApp.Server.Tests.Controllers
             var request = new LoginRequestDTO { Username = "testUser", Password = "password123" };
             HttpResponseMessage response;
 
-            // Act
-            for (int i = 0; i < 4; i++)
+            // Register the user first (consumes 1 rate limit permit)
+            await client.PostAsJsonAsync("/auth/register", request);
+
+            // Act - 3 logins + 1 register = 4 permits (at the limit)
+            for (int i = 0; i < 3; i++)
             {
                 response = await client.PostAsJsonAsync("/auth/login", request);
                 Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             }
 
+            // 5th call exceeds the limit
             response = await client.PostAsJsonAsync("/auth/login", request);
             Assert.Equal (HttpStatusCode.TooManyRequests, response.StatusCode);
 

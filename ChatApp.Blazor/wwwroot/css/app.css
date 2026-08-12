@@ -9,6 +9,7 @@ html, body {
     font-size: 12px;
     height: 100%;
     overflow: hidden;
+    touch-action: manipulation;
 }
 
 /* === DESKTOP === */

@@ -14,14 +14,15 @@
 .desktop-window-titlebar {
     background: linear-gradient(90deg, #000080, #1084d0);
     color: white;
-    font-weight: bold;
-    font-size: 12px;
-    padding: 3px 4px;
+    font-weight: 700;
+    font-size: 11px;
+    padding: 1px 2px 1px 3px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     user-select: none;
     cursor: default;
+    -webkit-font-smoothing: none;
 }
 
 .desktop-window-titlebar ::deep .win95-title-btn {

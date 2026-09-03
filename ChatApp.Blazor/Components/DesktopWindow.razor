@@ -17,20 +17,21 @@
             <WinOldButton OnClick="@(() => Manager.MinimizeWindow(State.Id))"
                           Appearance="Appearance.Win98"
                           Class="win95-title-btn"
-                          Style="width: 22px; height: 20px; font-size: 11px; padding: 0; min-width: 22px; line-height: 1;">
+                          Style="font-size: 11px; padding: 0; min-width: 16px; min-height: 14px; line-height: 1; display: block; box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px grey, inset 2px 2px #dfdfdf">
                 _
             </WinOldButton>
             <WinOldButton OnClick="@(() => Manager.ToggleMaximize(State.Id))"
                           Appearance="Appearance.Win98"
                           Class="win95-title-btn"
-                          Style="width: 22px; height: 20px; font-size: 11px; padding: 0; min-width: 22px; line-height: 1;">
+                          Style="font-size: 11px; padding: 0; min-width: 16px; min-height: 14px; line-height: 1; display: block;
+                                 box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px grey, inset 2px 2px #dfdfdf">
                 @(State.IsMaximized ? "❐" : "□")
             </WinOldButton>
             <WinOldButton OnClick="@(() => Manager.CloseWindow(State.Id))"
                           Appearance="Appearance.Win98"
                           Class="win95-title-btn"
-                          Style="width: 22px; height: 20px; font-size: 11px; padding: 0; min-width: 22px; line-height: 1;">
-                X
+                          Style="font-size: 11px; padding: 0; min-width: 16px; min-height: 14px; line-height: 1; display: block; box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px grey, inset 2px 2px #dfdfdf">X
+                
             </WinOldButton>
         </div>
     </div>
